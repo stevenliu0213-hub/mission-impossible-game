@@ -1,174 +1,21 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Mission Impossible</title>
-<style>
-  *{box-sizing:border-box}
-  html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#050816;color:#fff;font-family:Inter,Arial,sans-serif}
-  canvas{display:block;width:100vw;height:100vh;background:#050816}
-  #hud{position:fixed;z-index:5;top:14px;left:16px;right:16px;display:grid;grid-template-columns:1fr auto 1fr;gap:14px;align-items:start;pointer-events:none}
-  .panel{background:rgba(2,8,24,.72);border:1px solid rgba(85,219,255,.35);box-shadow:0 0 22px rgba(0,190,255,.12) inset,0 8px 30px rgba(0,0,0,.28);backdrop-filter:blur(8px);border-radius:14px;padding:9px 12px}
-  #hud .left{justify-self:start;min-width:240px} #hud .center{justify-self:center;text-align:center;min-width:260px} #hud .right{justify-self:end;min-width:230px;text-align:right}
-  #title{font-weight:900;letter-spacing:2px;color:#9ff7ff;text-shadow:0 0 14px #00d9ff;font-size:16px}
-  #levelName{font-weight:800;color:#ffe073;margin-top:3px}
-  #stats{font-size:12px;line-height:1.45;color:#d9edff}
-  #hearts{font-size:22px;letter-spacing:3px;color:#ff516f;text-shadow:0 0 8px #ff244c}
-  .meter{display:flex;align-items:center;gap:8px;margin-top:4px}.label{font-size:11px;min-width:54px;color:#bfeaff}.bar{width:150px;height:14px;border-radius:9px;background:#0b1732;border:1px solid #244a75;overflow:hidden}.fill{height:100%;width:100%;background:linear-gradient(90deg,#4df0a7,#ffe36d);box-shadow:0 0 10px rgba(91,255,179,.4)}
-  #message{position:fixed;z-index:8;top:88px;left:50%;transform:translateX(-50%);max-width:min(700px,85vw);text-align:center;background:rgba(8,15,34,.88);border:1px solid rgba(255,224,115,.55);border-radius:12px;padding:8px 14px;font-size:13px;letter-spacing:.4px;color:#fff5bd;opacity:0;transition:opacity .15s;pointer-events:none}
-  #soundBtn{position:fixed;z-index:10;right:14px;bottom:14px;border:1px solid #4ac7ff;background:rgba(6,20,44,.9);color:#c8f5ff;border-radius:10px;padding:8px 11px;font-weight:800;cursor:pointer}
-  #overlay{position:fixed;z-index:20;inset:0;background:radial-gradient(circle at 50% 35%,rgba(20,46,96,.95),rgba(2,5,18,.98) 65%);display:flex;align-items:center;justify-content:center;padding:24px}
-  .card{width:min(720px,94vw);border:1px solid rgba(79,220,255,.6);background:rgba(5,13,33,.93);border-radius:22px;padding:28px;box-shadow:0 0 60px rgba(0,196,255,.16);text-align:center}
-  .card h1{margin:0 0 8px;font-size:42px;letter-spacing:4px;color:#c8fbff;text-shadow:0 0 18px #00dfff}.card h2{font-size:18px;color:#ffe47e;margin:8px 0 18px}.card p{color:#cfe5ff;line-height:1.6}.controls{display:grid;grid-template-columns:1fr 1fr;gap:8px;text-align:left;margin:18px auto;max-width:520px;color:#e8f5ff;font-size:14px}.kbd{display:inline-block;border:1px solid #67cdf9;border-bottom-width:3px;border-radius:6px;padding:2px 7px;margin-right:5px;color:#fff;background:#0b2443;font-weight:800}
-  .primary{margin-top:10px;border:none;border-radius:12px;background:linear-gradient(90deg,#42e3ff,#7a7cff);color:#04111f;padding:13px 24px;font-size:16px;font-weight:900;cursor:pointer;box-shadow:0 0 22px rgba(66,227,255,.35)}
-  #mobileControls{position:fixed;z-index:12;left:12px;right:12px;bottom:10px;display:none;justify-content:space-between;pointer-events:none}.pad{display:flex;gap:8px;pointer-events:auto}.mBtn{width:56px;height:56px;border-radius:50%;border:1px solid #61d5ff;background:rgba(5,17,38,.78);color:#fff;font-weight:900;font-size:18px;touch-action:none}
-  @media(max-width:850px){
-    #hud{grid-template-columns:1fr 1fr;gap:8px}
-    #hud .center{grid-column:1 / span 2;grid-row:2}
-    #stats{font-size:11px}
-    #mobileControls{display:flex}
-  }
-  @media(max-height:700px){
-    #hud{top:8px;left:10px;right:10px;gap:8px}
-    .panel{padding:6px 9px;border-radius:10px}
-    #hearts{font-size:18px;letter-spacing:2px}
-    .label{font-size:10px;min-width:48px}
-    .bar{height:12px}
-    #stats{font-size:10px;line-height:1.35}
-    #message{top:62px;padding:6px 11px;font-size:11px}
-    #soundBtn{transform:scale(.84);transform-origin:top right}
-  }
-</style>
-</head>
-<body>
-<canvas id="game"></canvas>
-<div id="hud">
-  <div class="panel left">
-    <div id="hearts"></div>
-    <div class="meter"><span class="label">ENERGY</span><div class="bar"><div id="energyFill" class="fill"></div></div></div>
-  </div>
-  <div class="panel center"><div id="title">MISSION IMPOSSIBLE</div><div id="levelName">NEON REALM</div></div>
-  <div class="panel right" id="stats"></div>
-</div>
-<div id="message"></div>
-<button id="soundBtn">🔊 SOUND</button>
-<div id="mobileControls"><div class="pad"><button class="mBtn" data-key="ArrowLeft">◀</button><button class="mBtn" data-key="ArrowRight">▶</button></div><div class="pad"><button class="mBtn" data-key="KeyS">S</button><button class="mBtn" data-key="KeyL">L</button><button class="mBtn" data-key="ArrowUp">▲</button></div></div>
-<div id="overlay"><div class="card">
-  <h1>MISSION IMPOSSIBLE</h1><h2>Rescue Nova from the Omega Vault</h2>
-  <p>Explore five futuristic realms, collect food and treasure, defeat key-carrying enemies, and survive the Omega Warden. In Level 5, defeat the boss, then collect the green Legendary Key to unlock the Omega Vault.</p>
-  <div class="controls">
-    <div><span class="kbd">← →</span>Move</div><div><span class="kbd">↑ / SPACE</span>Jump / Double Jump</div>
-    <div><span class="kbd">↓</span>Phase Dash</div><div><span class="kbd">S</span>Sword</div>
-    <div><span class="kbd">L</span>Laser</div><div>Highest score wins</div>
-  </div>
-  <button id="startBtn" class="primary">BEGIN MISSION</button>
-  <button id="againBtn" class="primary" style="display:none">PLAY AGAIN</button>
-</div></div>
+<body style="margin:0;background:#050816;color:white;font-family:Arial;display:grid;place-items:center;height:100vh">Loading Mission Impossible…
 <script>
-(()=>{
-const canvas=document.getElementById('game'),ctx=canvas.getContext('2d');
-let W=innerWidth,H=innerHeight,DPR=Math.min(devicePixelRatio||1,2);
-function resize(){W=innerWidth;H=innerHeight;DPR=Math.min(devicePixelRatio||1,2);canvas.width=Math.floor(W*DPR);canvas.height=Math.floor(H*DPR);canvas.style.width=W+'px';canvas.style.height=H+'px';ctx.setTransform(DPR,0,0,DPR,0,0)}
-addEventListener('resize',resize);resize();
-const hudHearts=document.getElementById('hearts'),energyFill=document.getElementById('energyFill'),levelNameEl=document.getElementById('levelName'),statsEl=document.getElementById('stats'),messageEl=document.getElementById('message');
-const overlay=document.getElementById('overlay'),startBtn=document.getElementById('startBtn'),againBtn=document.getElementById('againBtn'),soundBtn=document.getElementById('soundBtn');
-const keys={};addEventListener('keydown',e=>{keys[e.code]=true;if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(e.code))e.preventDefault()});addEventListener('keyup',e=>keys[e.code]=false);
-document.querySelectorAll('.mBtn').forEach(b=>{const k=b.dataset.key;const on=e=>{e.preventDefault();keys[k]=true};const off=e=>{e.preventDefault();keys[k]=false};b.addEventListener('touchstart',on,{passive:false});b.addEventListener('touchend',off,{passive:false});b.addEventListener('mousedown',on);b.addEventListener('mouseup',off);b.addEventListener('mouseleave',off)});
-const LEVELS=[
-{name:'Neon Realm',sky:['#08152c','#123a61'],accent:'#6ce7ff',ground:'#1a3e5f'},
-{name:'Ember Rift',sky:['#1a1024','#442145'],accent:'#ffbe74',ground:'#51304c'},
-{name:'Void Citadel',sky:['#060816','#171238'],accent:'#a98cff',ground:'#252058'},
-{name:'Skyforge Ruins',sky:['#071b2d','#16485e'],accent:'#79ffe0',ground:'#225365'},
-{name:'Omega Vault',sky:['#06050c','#24102a'],accent:'#ff4bd4',ground:'#3e2346'}
-];
-let world,player,cameraX=0,started=false,last=performance.now(),messageTime=0,score=0,totalTreasure=0,totalFood=0;
-const GRAV=1650;
-function platform(x,y,w,h=24){return{x,y,w,h}}
-function safePlatforms(level){let p=[platform(-100,620,900,180),platform(860,570,260),platform(1190,500,300),platform(1540,610,330),platform(1950,520,300),platform(2310,600,380),platform(2760,490,330),platform(3150,590,420),platform(3630,520,320),platform(4020,600,390),platform(4490,500,300),platform(4840,590,410),platform(5320,520,300),platform(5680,610,400),platform(6160,500,300),platform(6510,590,420),platform(6990,510,310),platform(7350,600,500)];
- if(level===1||level===2){p.push(platform(720,520,120),platform(1130,610,100),platform(1830,610,100),platform(2650,610,100),platform(3510,610,100),platform(4390,610,100),platform(5220,610,100),platform(6070,610,100),platform(6900,610,100));}
- return p}
-function nearestPlatform(x,plats){let best=plats[0],d=1e9;for(const p of plats){const cx=p.x+p.w/2,dd=Math.abs(cx-x);if(dd<d){d=dd;best=p}}return best}
-function enemy(type,x,p,keyCarrier=false){const hp=type==='boss'?30:type==='brute'?5:type==='hunter'?3:2;return{type,x,y:p.y-48,w:type==='boss'?82:42,h:type==='boss'?82:48,vx:0,vy:0,hp,maxHp:hp,alive:true,onGround:true,dir:-1,attackCd:0,activated:type==='boss',keyCarrier,keyDropped:false,jumpThink:0,lunge:0,phaseResist:false}}
-function buildWorld(level=1){
-  const plats=safePlatforms(level),hazards=[],foods=[],treasures=[],enemies=[],keysWorld=[];
-  if(level>=3){hazards.push({type:'lava',x:800,y:636,w:62,h:84},{type:'water',x:1870,y:636,w:80,h:84},{type:'fire',x:2690,y:585,w:70,h:35});if(level>=4)hazards.push({type:'lava',x:3540,y:636,w:88,h:84},{type:'fire',x:4680,y:475,w:75,h:30},{type:'water',x:6070,y:636,w:90,h:84});if(level===5)hazards.push({type:'fire',x:7040,y:485,w:80,h:28});}
-  for(let i=1;i<plats.length;i+=2){foods.push({x:plats[i].x+45,y:plats[i].y-28,w:24,h:24,taken:false});if(i%3===1)treasures.push({x:plats[i].x+plats[i].w-60,y:plats[i].y-30,w:26,h:26,taken:false})}
-  if(level<5){const spots=[1480,3350,5550];spots.forEach((x,j)=>{const p=nearestPlatform(x,plats);const type=j===2?'brute':j===1?'hunter':'drone';enemies.push(enemy(type,x,p,true))});}
-  const extra=level===1?7:level===2?9:level===3?11:level===4?13:8;for(let i=0;i<extra;i++){const x=900+i*520+(i%2)*120;const p=nearestPlatform(x,plats);enemies.push(enemy(i%3===0?'hunter':i%4===0?'brute':'drone',x,p,false))}
-  if(level===5){const bp=nearestPlatform(6750,plats);enemies.push(enemy('boss',6750,bp,false));}
-  return{level,name:LEVELS[level-1].name,plats,hazards,foods,treasures,enemies,keys:keysWorld,legendaryKey:null,friend:{x:7480,y:445,w:70,h:95},bossLightningCd:.6,bossExplosionCd:1.0};
-}
-function newPlayer(){return{x:100,y:500,w:34,h:52,vx:0,vy:0,onGround:false,jumps:0,hp:15,maxHp:15,energy:100,maxEnergy:100,attackCooldown:0,attackTime:0,laserCooldown:0,dashTime:0,invuln:0,keysFound:0,legendaryKey:false,facing:1}}
-function resetGame(level=1,keepStats=false){world=buildWorld(level);player=newPlayer();cameraX=0;if(!keepStats){score=0;totalTreasure=0;totalFood=0}showMessage('LEVEL '+level+' — '+world.name,1.7);updateHud()}
-function showMessage(s,t=1.2){messageEl.textContent=s;messageEl.style.opacity=1;messageTime=t}
-function overlap(a,b){return a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y}
-function pointHazard(x,y){return world.hazards.some(h=>x>h.x&&x<h.x+h.w&&y>h.y&&y<h.y+h.h)}
-function platformBelow(x,y,maxDrop=120){let best=null,dy=maxDrop;for(const p of world.plats){if(x>=p.x&&x<=p.x+p.w&&p.y>=y&&p.y-y<dy){dy=p.y-y;best=p}}return best}
-function nearestSafeKeyDrop(x,y){let candidates=world.plats.filter(p=>!world.hazards.some(h=>h.x<p.x+p.w&&h.x+h.w>p.x&&h.y<p.y+10&&h.y+h.h>p.y-20));let p=nearestPlatform(x,candidates.length?candidates:world.plats);return{x:Math.max(p.x+20,Math.min(x,p.x+p.w-40)),y:p.y-30}}
-function dropNormalKey(e){if(!e.keyCarrier||e.keyDropped)return;e.keyDropped=true;const pos=nearestSafeKeyDrop(e.x,e.y);world.keys.push({x:pos.x,y:pos.y,w:26,h:26,taken:false})}
-function grantLegendaryKeyIfWardenDead(e){if(!e||e.type!=='boss'||e.alive||e.hp>0||player.legendaryKey)return;if(world.legendaryKey&&!world.legendaryKey.taken)return;const pos=nearestSafeKeyDrop(e.x,e.y);world.legendaryKey={x:pos.x,y:pos.y,w:30,h:30,taken:false,pickupDelay:.8,pickupArmed:false};showMessage('THE GREEN LEGENDARY KEY HAS DROPPED!',2)}
-function hurtPlayer(n,msg='HIT!'){if(player.invuln>0)return;player.hp-=n;player.invuln=.65;sfx('damage');showMessage(msg+'  −'+n+' HP',.8);if(player.hp<=0)respawn()}
-function respawn(){player.hp=15;player.energy=Math.max(35,player.energy);const p=nearestPlatform(player.x,world.plats);player.x=Math.max(p.x+30,Math.min(player.x,p.x+p.w-60));player.y=p.y-player.h-5;player.vx=0;player.vy=0;player.invuln=1.5;showMessage('RESPAWNED ON SAFE PLATFORM',1.2)}
-function damageEnemy(e,n,knock=0){if(!e.alive)return;e.hp-=n;sfx('hit');e.vx+=knock;if(e.hp<=0){e.alive=false;sfx(e.type==='boss'?'bossDown':'enemyDown');score+=e.type==='boss'?1200:120;dropNormalKey(e);grantLegendaryKeyIfWardenDead(e)}}
-function safeAhead(e,dir){const xs=[e.x+e.w/2+dir*46,e.x+e.w/2+dir*78,e.x+e.w/2+dir*110];for(const x of xs){const foot=e.y+e.h+5;if(pointHazard(x,foot+22))return false;const p=platformBelow(x,foot,145);if(!p)return false;if(world.hazards.some(h=>x>h.x-24&&x<h.x+h.w+24&&p.y>h.y-35&&p.y<h.y+h.h+80))return false}return true}
-function updateEnemy(e,dt){if(!e.alive)return;if(e.type!=='boss'&&!e.activated){if(Math.abs(player.x-e.x)<620&&Math.abs(player.y-e.y)<280)e.activated=true;else return}e.attackCd=Math.max(0,e.attackCd-dt);e.jumpThink=Math.max(0,e.jumpThink-dt);e.lunge=Math.max(0,e.lunge-dt);const dx=player.x-e.x,dir=Math.sign(dx)||1;e.dir=dir;const near=Math.abs(dx)<115&&Math.abs(player.y-e.y)<85;
- if(near&&e.type!=='boss'&&e.attackCd<=0&&e.onGround){e.lunge=.34;e.attackCd=1.15;e.vy=-390;e.vx=dir*260;sfx('bite')}
- if(e.type==='boss'){e.vx=dir*75;if(Math.abs(dx)<100&&e.attackCd<=0){hurtPlayer(2,'WARDEN STRIKE');e.attackCd=1.0}}
- else if(e.lunge<=0){const wants=dir*90;if(e.onGround&&!safeAhead(e,dir)){if(e.jumpThink<=0)e.jumpThink=.18;e.vx*=.7;if(e.jumpThink<.05&&safeAhead(e,dir))e.vy=-500;else if(e.jumpThink<.05&&!safeAhead(e,dir))e.dir*=-1}else{e.vx+=(wants-e.vx)*Math.min(1,dt*5);if(e.onGround&&player.y+30<e.y&&Math.abs(dx)<260&&safeAhead(e,dir))e.vy=-480}}
- e.vy+=GRAV*dt;e.x+=e.vx*dt;e.y+=e.vy*dt;e.onGround=false;for(const p of world.plats){if(e.x+e.w>p.x&&e.x<p.x+p.w&&e.y+e.h>=p.y&&e.y+e.h-e.vy*dt<=p.y+8&&e.vy>=0){e.y=p.y-e.h;e.vy=0;e.onGround=true;break}}
- if(e.y>820){e.alive=false;dropNormalKey(e);grantLegendaryKeyIfWardenDead(e);return}
- for(const h of world.hazards){if(overlap(e,h)){if(!e.hazardCd||e.hazardCd<=0){damageEnemy(e,1,0);e.hazardCd=.55}}}e.hazardCd=Math.max(0,(e.hazardCd||0)-dt);
- if(overlap(player,e)&&player.invuln<=0){if(player.dashTime>0){if(e.type==='boss'){showMessage('OMEGA WARDEN RESISTS PHASING!',.8);player.dashTime=0;player.vx=-player.facing*180}else{damageEnemy(e,99,player.facing*220)}}else hurtPlayer(e.lunge>0?2:(e.type==='boss'?2:1),e.lunge>0?'BITE!':'ENEMY HIT')}
-}
-function bossAttacks(dt){if(world.level!==5)return;const b=world.enemies.find(e=>e.type==='boss'&&e.alive);if(!b)return;world.bossLightningCd-=dt;world.bossExplosionCd-=dt;if(world.bossLightningCd<=0){world.bossLightningCd=5;sfx('bossLightning');if(Math.abs(player.x-b.x)<1300)hurtPlayer(3,'LIGHTNING ROD')}if(world.bossExplosionCd<=0){world.bossExplosionCd=7;sfx('bossExplosion');if(Math.abs(player.x-b.x)<420)hurtPlayer(5,'EXPLOSION MACE')}}
-let prevJump=false,prevSword=false,prevLaser=false,prevDash=false;
-function update(dt){if(!started)return;player.invuln=Math.max(0,player.invuln-dt);player.attackCooldown=Math.max(0,player.attackCooldown-dt);player.attackTime=Math.max(0,player.attackTime-dt);player.laserCooldown=Math.max(0,player.laserCooldown-dt);player.dashTime=Math.max(0,player.dashTime-dt);player.energy=Math.max(0,player.energy-dt*.8);
- const left=keys.ArrowLeft,right=keys.ArrowRight,jump=keys.ArrowUp||keys.Space,sword=keys.KeyS,laser=keys.KeyL,dash=keys.ArrowDown;
- if(player.dashTime<=0){const target=(right?1:0)-(left?1:0);player.vx+=(target*250-player.vx)*Math.min(1,dt*10);if(target)player.facing=target}else player.vx=player.facing*520;
- if(jump&&!prevJump){if(player.jumps<2){const cost=player.jumps===1?9:3;if(player.energy>=cost){player.energy-=cost;player.vy=-560;player.jumps++;player.onGround=false;sfx('jump')}}}prevJump=jump;
- if(dash&&!prevDash&&player.energy>=12){player.energy-=12;player.dashTime=.26;sfx('dash')}prevDash=dash;
- if(sword&&!prevSword&&player.attackCooldown<=0){player.attackCooldown=.36;player.attackTime=.18;sfx('sword');const box={x:player.facing>0?player.x+player.w:player.x-70,y:player.y-8,w:70,h:64};for(const e of world.enemies)if(e.alive&&overlap(box,e))damageEnemy(e,e.type==='boss'?2:3,player.facing*28)}prevSword=sword;
- if(laser&&!prevLaser&&player.laserCooldown<=0&&player.energy>=5){player.energy-=5;player.laserCooldown=.3;sfx('laser');const range=650;let target=null,d=range;for(const e of world.enemies){if(!e.alive)continue;const dx=(e.x-player.x)*player.facing;if(dx>0&&dx<d&&Math.abs(e.y-player.y)<120){target=e;d=dx}}if(target)damageEnemy(target,1,player.facing*18)}prevLaser=laser;
- player.vy+=GRAV*dt;player.x+=player.vx*dt;player.y+=player.vy*dt;player.onGround=false;for(const p of world.plats){if(player.x+player.w>p.x&&player.x<p.x+p.w&&player.y+player.h>=p.y&&player.y+player.h-player.vy*dt<=p.y+8&&player.vy>=0){player.y=p.y-player.h;player.vy=0;player.onGround=true;player.jumps=0;break}}
- if(player.y>850)respawn();for(const h of world.hazards)if(overlap(player,h)&&player.invuln<=0)hurtPlayer(1,h.type.toUpperCase());
- for(const f of world.foods)if(!f.taken&&overlap(player,f)){f.taken=true;player.energy=Math.min(100,player.energy+28);score+=40;totalFood++;sfx('pickup')}
- for(const t of world.treasures)if(!t.taken&&overlap(player,t)){t.taken=true;score+=100;totalTreasure++;sfx('pickup')}
- for(const k of world.keys)if(!k.taken&&overlap(player,k)){k.taken=true;player.keysFound++;score+=180;sfx('key');showMessage('VAULT KEY '+player.keysFound+'/3',1)}
- if(world.legendaryKey&&!world.legendaryKey.taken){const k=world.legendaryKey;k.pickupDelay=Math.max(0,k.pickupDelay-dt);if(!overlap(player,k))k.pickupArmed=true;if(k.pickupDelay<=0&&k.pickupArmed&&overlap(player,k)){k.taken=true;player.legendaryKey=true;score+=500;sfx('legendary');showMessage('GREEN LEGENDARY KEY ACQUIRED!',1.8)}}
- for(const e of world.enemies)updateEnemy(e,dt);bossAttacks(dt);
- const fr=world.friend,vaultZone=world.level===5?{x:fr.x-85,y:fr.y-55,w:190,h:150}:{x:fr.x-45,y:fr.y-25,w:120,h:115};if(overlap(player,vaultZone)){if(world.level<5&&player.keysFound<3){showMessage('VAULT SEALED — FIND ALL 3 KEYS',1.1)}else if(world.level===5&&world.enemies.some(e=>e.type==='boss'&&e.alive)){showMessage('NOVA VAULT SEALED — defeat the OMEGA WARDEN!',1.6)}else if(world.level===5&&!player.legendaryKey){showMessage('NOVA VAULT SEALED — collect the GREEN LEGENDARY KEY!',1.6)}else{if(world.level<5){sfx('levelSuccess');score+=400;resetGame(world.level+1,true)}else finish(true)}}
- cameraX+=(Math.max(0,Math.min(player.x-W*.35,7800-W))-cameraX)*Math.min(1,dt*5);if(messageTime>0){messageTime-=dt;if(messageTime<=0)messageEl.style.opacity=0}updateHud();
-}
-function finish(win){started=false;sfx('finalSuccess');overlay.style.display='flex';startBtn.style.display='none';againBtn.style.display='inline-block';overlay.querySelector('h1').textContent='MISSION COMPLETE';overlay.querySelector('h2').textContent='NOVA RESCUED';overlay.querySelector('p').innerHTML='Final score: <b>'+score+'</b><br>Treasure: '+totalTreasure+' • Food: '+totalFood+'<br>The Omega Vault has fallen.'}
-function updateHud(){hudHearts.textContent='♥'.repeat(Math.max(0,player?.hp||0));energyFill.style.width=((player?.energy||0))+'%';levelNameEl.textContent=world?.name||'';const enemies=world?world.enemies.filter(e=>e.alive).length:0;let k=world&&world.level===5?(world.enemies.some(e=>e.type==='boss'&&e.alive)?'WARDEN ACTIVE':(player.legendaryKey?'LEGENDARY KEY ✓':'COLLECT LEGENDARY KEY')):((player?.keysFound||0)+' / 3 KEYS');statsEl.innerHTML='SCORE <b>'+score+'</b><br>'+k+'<br>ENEMIES '+enemies}
-function drawBackground(t){const L=LEVELS[(world?.level||1)-1];const g=ctx.createLinearGradient(0,0,0,H);g.addColorStop(0,L.sky[0]);g.addColorStop(1,L.sky[1]);ctx.fillStyle=g;ctx.fillRect(0,0,W,H);for(let i=0;i<70;i++){const x=(i*197-(cameraX*.08)%197+W)%W,y=(i*83)%Math.max(1,H*.75);ctx.fillStyle='rgba(190,235,255,'+(0.25+0.35*Math.sin(t*.001+i)*.5+.2)+')';ctx.fillRect(x,y,2,2)}ctx.fillStyle='rgba(70,180,255,.08)';for(let i=0;i<8;i++){const x=((i*310-cameraX*.18)%(W+400))-100;ctx.fillRect(x,H*.42+i%3*45,120,2)}}
-function drawPlatform(p){const L=LEVELS[world.level-1];ctx.fillStyle=L.ground;ctx.fillRect(p.x-cameraX,p.y,p.w,p.h);ctx.fillStyle=L.accent;ctx.globalAlpha=.55;ctx.fillRect(p.x-cameraX,p.y,p.w,3);ctx.globalAlpha=1;ctx.fillStyle='rgba(0,0,0,.22)';ctx.fillRect(p.x-cameraX,p.y+p.h,p.w,Math.max(0,760-(p.y+p.h)))}
-function drawHazard(h,t){const x=h.x-cameraX;if(h.type==='lava'){ctx.fillStyle='#f04b22';ctx.fillRect(x,h.y,h.w,h.h);ctx.fillStyle='#ffd35a';for(let i=0;i<4;i++)ctx.fillRect(x+(i*23+t*.03)%h.w,h.y+5+Math.sin(t*.006+i)*5,12,5)}else if(h.type==='water'){ctx.fillStyle='#1ee0b3';ctx.globalAlpha=.65;ctx.fillRect(x,h.y,h.w,h.h);ctx.globalAlpha=1}else{ctx.fillStyle='#ff7438';for(let i=0;i<5;i++){ctx.beginPath();ctx.moveTo(x+i*h.w/5,h.y+h.h);ctx.lineTo(x+i*h.w/5+12,h.y-12-Math.sin(t*.01+i)*9);ctx.lineTo(x+i*h.w/5+24,h.y+h.h);ctx.fill()}}}
-function drawHazardWarning(h,t){ctx.save();ctx.font='bold 11px Arial';ctx.textAlign='center';ctx.fillStyle='rgba(255,235,100,.9)';ctx.fillText('⚠',h.x-cameraX+h.w/2,h.y-13+Math.sin(t*.005)*2);ctx.restore()}
-function drawEnemy(e){if(!e.alive)return;const x=e.x-cameraX;ctx.save();ctx.translate(x,e.y);ctx.fillStyle=e.type==='boss'?'#7b274f':e.type==='brute'?'#7f4a37':e.type==='hunter'?'#383d87':'#23516b';ctx.fillRect(0,8,e.w,e.h-8);ctx.fillStyle=e.type==='boss'?'#ff4bd4':'#8ef3ff';ctx.fillRect(7,16,7,6);ctx.fillRect(e.w-14,16,7,6);if(e.lunge>0){ctx.fillStyle='#fff';for(let i=0;i<4;i++)ctx.fillRect(8+i*7,32,4,7)}if(e.keyCarrier){ctx.font='bold 19px Arial';ctx.textAlign='center';ctx.shadowColor='#ffe500';ctx.shadowBlur=12;ctx.fillStyle='#fff36d';ctx.fillText('★ KEY CARRIER ★',e.w/2,-56);ctx.shadowBlur=0}ctx.fillStyle='#142139';ctx.fillRect(-2,-34,e.w+4,8);ctx.fillStyle=e.type==='boss'?'#ff4bd4':'#50f3a7';ctx.fillRect(0,-32,e.w*(e.hp/e.maxHp),4);if(e.type==='boss'){ctx.font='bold 13px Arial';ctx.textAlign='center';ctx.fillStyle='#ffb8ef';ctx.fillText('OMEGA WARDEN',e.w/2,-45)}ctx.restore()}
-function drawPickup(o,type){if(o.taken)return;const x=o.x-cameraX,y=o.y;if(type==='food'){ctx.fillStyle='#6cff9a';ctx.beginPath();ctx.arc(x+12,y+12,10,0,Math.PI*2);ctx.fill()}else if(type==='treasure'){ctx.fillStyle='#ffd45e';ctx.fillRect(x,y,24,22);ctx.fillStyle='#fff4aa';ctx.fillRect(x+4,y+4,16,4)}else{ctx.fillStyle='#ffe35a';ctx.fillRect(x+3,y+8,20,8);ctx.beginPath();ctx.arc(x+4,y+12,7,0,Math.PI*2);ctx.strokeStyle='#fff6a5';ctx.lineWidth=4;ctx.stroke()}}
-function drawLegendaryKey(t){const k=world.legendaryKey;if(!k||k.taken)return;const x=k.x-cameraX,y=k.y;ctx.save();ctx.shadowColor='#45ff6d';ctx.shadowBlur=18;ctx.strokeStyle='#4dff79';ctx.fillStyle='#39e866';ctx.lineWidth=5;ctx.beginPath();ctx.arc(x+7,y+14,8,0,Math.PI*2);ctx.stroke();ctx.fillRect(x+13,y+11,17,7);ctx.fillRect(x+23,y+17,5,7);ctx.restore();ctx.font='bold 14px Arial';ctx.fillStyle='#a9ffb9';ctx.textAlign='center';ctx.fillText('LEGENDARY KEY',x+15,y-10+Math.sin(t*.006)*2)}
-function drawFriend(){const f=world.friend,x=f.x-cameraX;ctx.save();ctx.fillStyle='#684e9d';ctx.fillRect(x,f.y,f.w,f.h);ctx.strokeStyle='#e1c9ff';ctx.lineWidth=3;ctx.strokeRect(x+8,f.y+12,f.w-16,f.h-24);ctx.font='bold 13px Arial';ctx.fillStyle='#fff';ctx.textAlign='center';ctx.fillText(world.level===5?(world.enemies.some(e=>e.type==='boss'&&e.alive)?'WARDEN ACTIVE':(player.legendaryKey?'VAULT READY':'NEED LEGENDARY KEY')):(player.keysFound+'/3 KEYS'),x+f.w/2,f.y-12);ctx.restore()}
-function drawPlayer(){const x=player.x-cameraX,y=player.y;ctx.save();ctx.globalAlpha=player.invuln>0&&Math.floor(player.invuln*12)%2?.4:1;ctx.fillStyle='#dcefff';ctx.fillRect(x+9,y,16,14);ctx.fillStyle='#2878bb';ctx.fillRect(x+5,y+14,24,27);ctx.fillStyle='#1a3557';ctx.fillRect(x+4,y+41,10,11);ctx.fillRect(x+20,y+41,10,11);ctx.fillStyle='#69f1ff';ctx.fillRect(x+12,y+4,10,4);if(player.attackTime>0){ctx.strokeStyle='#fff3a1';ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(x+17,y+26);ctx.lineTo(x+17+player.facing*58,y+10);ctx.stroke()}if(player.legendaryKey){ctx.strokeStyle='#49ff75';ctx.lineWidth=4;ctx.beginPath();const hx=x+17+player.facing*18,hy=y+28;ctx.arc(hx,hy,5,0,Math.PI*2);ctx.stroke();ctx.fillStyle='#49ff75';ctx.fillRect(player.facing>0?hx+5:hx-18,hy-2,13,4)}ctx.restore()}
-function draw(t){drawBackground(t);const worldLift=Math.max(0,720-H);ctx.save();ctx.translate(0,-worldLift);for(const h of world.hazards){drawHazard(h,t);drawHazardWarning(h,t)}for(const p of world.plats)drawPlatform(p);for(const f of world.foods)drawPickup(f,'food');for(const tr of world.treasures)drawPickup(tr,'treasure');for(const k of world.keys)drawPickup(k,'key');drawLegendaryKey(t);drawFriend();for(const e of world.enemies)drawEnemy(e);drawPlayer();ctx.restore()}
-let audioCtx=null,master=null,soundOn=true,musicStarted=false,musicTimer=null,musicStep=0,currentMusicLevel=1;
-function ensureAudio(){if(audioCtx)return;audioCtx=new (window.AudioContext||window.webkitAudioContext)();master=audioCtx.createGain();master.gain.value=.7;master.connect(audioCtx.destination)}
-function tone(freq,dur=.1,type='sine',vol=.03,endFreq=null,delay=0){if(!soundOn)return;ensureAudio();const now=audioCtx.currentTime+delay,o=audioCtx.createOscillator(),g=audioCtx.createGain();o.type=type;o.frequency.setValueAtTime(freq,now);if(endFreq)o.frequency.exponentialRampToValueAtTime(Math.max(20,endFreq),now+dur);g.gain.setValueAtTime(.0001,now);g.gain.exponentialRampToValueAtTime(vol,now+.01);g.gain.exponentialRampToValueAtTime(.0001,now+dur);o.connect(g);g.connect(master);o.start(now);o.stop(now+dur+.03)}
-function noise(dur=.06,vol=.03,delay=0){if(!soundOn)return;ensureAudio();const len=Math.max(1,Math.floor(audioCtx.sampleRate*dur)),buf=audioCtx.createBuffer(1,len,audioCtx.sampleRate),d=buf.getChannelData(0);for(let i=0;i<len;i++)d[i]=(Math.random()*2-1)*(1-i/len);const s=audioCtx.createBufferSource(),g=audioCtx.createGain();s.buffer=buf;g.gain.value=vol;s.connect(g);g.connect(master);s.start(audioCtx.currentTime+delay)}
-function sfx(n){if(!soundOn)return;switch(n){case'sword':tone(760,.08,'sawtooth',.050,190);break;case'laser':tone(1150,.10,'square',.045,280);break;case'jump':tone(300,.10,'sine',.03,520);break;case'hit':noise(.045,.045);tone(105,.055,'sine',.05,72);break;case'bite':tone(150,.06,'square',.048,85);noise(.04,.04);break;case'enemyDown':tone(220,.12,'triangle',.035,70);break;case'pickup':tone(660,.08,'sine',.048,990);break;case'key':tone(560,.09,'triangle',.04,900);tone(900,.12,'sine',.025,1200,.08);break;case'legendary':tone(440,.15,'sine',.05,660);tone(660,.2,'triangle',.04,990,.12);tone(990,.25,'sine',.035,1320,.25);break;case'damage':noise(.035,.045);tone(92,.055,'sine',.050,70);break;case'dash':tone(380,.09,'sawtooth',.025,110);break;case'bossLightning':tone(160,.18,'sawtooth',.055,55);noise(.12,.05);break;case'bossExplosion':tone(100,.10,'sawtooth',.052,55);noise(.20,.06);break;case'bossDown':tone(140,.45,'sawtooth',.05,45);tone(330,.35,'triangle',.03,120,.2);break;case'levelSuccess':tone(523,.16,'triangle',.035,659);tone(659,.18,'sine',.035,784,.15);tone(784,.28,'sine',.04,1047,.3);break;case'finalSuccess':[523,659,784,1047].forEach((f,i)=>tone(f,.38,'triangle',.04,f*1.02,i*.16));break}}
-function musicPulse(){if(!musicStarted||!soundOn)return;const lvl=currentMusicLevel;if(lvl<=2){const roots=[130.81,146.83,164.81,174.61,196,174.61,164.81,146.83],thirds=[164.81,185,207.65,220,246.94,220,207.65,185],fifths=[196,220,246.94,261.63,293.66,261.63,246.94,220],melody=[329.63,392,440,392,493.88,440,392,349.23,329.63,349.23,392,440,392,329.63,293.66,329.63],sparkle=[523.25,587.33,659.25,587.33,523.25,493.88,523.25,587.33];const i=musicStep%roots.length,mi=musicStep%melody.length,r=roots[i],tt=thirds[i],f=fifths[i],m=melody[mi];tone(r,1.12,'sine',.052,r*.997);tone(tt,1.08,'sine',.040,tt*1.001,.025);tone(f,1.02,'triangle',.034,f*.999,.05);tone(m,.70,'sine',.052,m*1.004,.08);if(musicStep%2===1)tone(m*.75,.50,'triangle',.028,m*.755,.27);if(musicStep%4===3){const s=sparkle[i];tone(s,.32,'sine',.015,s*1.01,.18)}}else if(lvl<=4){const bass=[82.41,82.41,98,92.5,82.41,73.42,77.78,82.41],lead=[329.63,311.13,293.66,261.63,293.66,311.13,246.94,277.18];const f=bass[musicStep%bass.length],lf=lead[musicStep%lead.length];tone(f,.24,'triangle',.030,f*.90);if(musicStep%2===0)tone(lf,.12,'sawtooth',.018,lf*.93);if(musicStep%3===0)noise(.03,.012)}else{const bass=[82.41,98,110,123.47,98,110,130.81,123.47],lead=[329.63,392,440,493.88,523.25,493.88,440,392];const f=bass[musicStep%bass.length],lf=lead[musicStep%lead.length];tone(f,.16,'sawtooth',.036,f*.88);noise(.035,.02);if(musicStep%2===0)tone(lf,.10,'square',.022,lf*.98,.02)}musicStep++}
-function musicIntervalForLevel(){return currentMusicLevel<=2?610:currentMusicLevel<=4?340:220}
-function scheduleMusic(){clearTimeout(musicTimer);musicPulse();musicTimer=setTimeout(scheduleMusic,musicIntervalForLevel())}
-function startMusic(){if(musicStarted)return;musicStarted=true;ensureAudio();const lvl=currentMusicLevel;if(lvl<=2){tone(261.63,.34,'sine',.038,329.63);tone(392,.40,'sine',.030,440,.10);tone(523.25,.32,'triangle',.020,587.33,.22)}scheduleMusic()}
-function stopMusic(){musicStarted=false;clearTimeout(musicTimer);musicTimer=null}
-soundBtn.onclick=()=>{soundOn=!soundOn;soundBtn.textContent=soundOn?'🔊 SOUND':'🔇 MUTED';if(soundOn){ensureAudio();if(started)startMusic()}else stopMusic()};
-window.addEventListener('pointerdown',()=>{ensureAudio()},{once:true});window.addEventListener('keydown',()=>{ensureAudio()},{once:true});
-startBtn.onclick=()=>{ensureAudio();stopMusic();overlay.style.display='none';resetGame(1,false);currentMusicLevel=1;started=true;last=performance.now();startMusic()};
-againBtn.onclick=()=>{ensureAudio();stopMusic();overlay.style.display='none';startBtn.style.display='inline-block';againBtn.style.display='none';overlay.querySelector('h1').textContent='MISSION IMPOSSIBLE';overlay.querySelector('h2').textContent='Rescue Nova from the Omega Vault';resetGame(1,false);currentMusicLevel=1;started=true;last=performance.now();startMusic()};
-resetGame(1,false);
-function loop(now){const dt=Math.min(.033,(now-last)/1000||0);last=now;currentMusicLevel=world.level;update(dt);draw(now);requestAnimationFrame(loop)}requestAnimationFrame(loop);
-})();
+(async()=>{
+  const names=["g1.txt","g2.txt","g3.txt","g4.txt","g5.txt","g6.txt"];
+  const parts=await Promise.all(names.map(n=>fetch(n,{cache:"no-store"}).then(r=>{if(!r.ok)throw new Error(n+" "+r.status);return r.text()})));
+  const arrays=parts.map((s,i)=>{
+    s=s.replace(/\s+/g,'');
+    const b=atob(s);
+    const a=new Uint8Array(b.length);
+    for(let j=0;j<b.length;j++)a[j]=b.charCodeAt(j);
+    return a;
+  });
+  const total=arrays.reduce((n,a)=>n+a.length,0), all=new Uint8Array(total);
+  let off=0;for(const a of arrays){all.set(a,off);off+=a.length}
+  const stream=new Blob([all]).stream().pipeThrough(new DecompressionStream("gzip"));
+  const html=await new Response(stream).text();
+  document.open();document.write(html);document.close();
+})().catch(e=>document.body.textContent="Could not load game: "+e);
 </script>
-</body>
-</html>
