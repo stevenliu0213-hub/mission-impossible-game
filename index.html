@@ -4,18 +4,11 @@
 <script>
 (async()=>{
   const names=["g1.txt","g2.txt","g3.txt","g4.txt","g5.txt","g6.txt"];
-  const parts=await Promise.all(names.map(n=>fetch(n,{cache:"no-store"}).then(r=>{if(!r.ok)throw new Error(n+" "+r.status);return r.text()})));
-  const arrays=parts.map((s,i)=>{
-    s=s.replace(/\s+/g,'');
-    const b=atob(s);
-    const a=new Uint8Array(b.length);
-    for(let j=0;j<b.length;j++)a[j]=b.charCodeAt(j);
-    return a;
-  });
-  const total=arrays.reduce((n,a)=>n+a.length,0), all=new Uint8Array(total);
-  let off=0;for(const a of arrays){all.set(a,off);off+=a.length}
-  const stream=new Blob([all]).stream().pipeThrough(new DecompressionStream("gzip"));
-  const html=await new Response(stream).text();
-  document.open();document.write(html);document.close();
+  const parts=await Promise.all(names.map(n=>fetch(n,{cache:"no-store"}).then(r=>r.text())));
+  const b=atob(parts.join(""));
+  const a=Uint8Array.from(b,c=>c.charCodeAt(0));
+  const s=new Blob([a]).stream().pipeThrough(new DecompressionStream("gzip"));
+  const h=await new Response(s).text();
+  document.open();document.write(h);document.close();
 })().catch(e=>document.body.textContent="Could not load game: "+e);
 </script>
