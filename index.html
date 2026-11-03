@@ -1,0 +1,14 @@
+<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mission Impossible</title>
+<body style="margin:0;background:#050816;color:white;font-family:Arial;display:grid;place-items:center;height:100vh">Loading Mission Impossible…
+<script>
+(async()=>{
+  const names=["g1.txt","g2.txt","g3.txt","g4.txt","g5.txt","g6.txt"];
+  const parts=await Promise.all(names.map(n=>fetch(n,{cache:"no-store"}).then(r=>r.text())));
+  const b=atob(parts.join(""));
+  const a=Uint8Array.from(b,c=>c.charCodeAt(0));
+  const s=new Blob([a]).stream().pipeThrough(new DecompressionStream("gzip"));
+  const h=await new Response(s).text();
+  document.open();document.write(h);document.close();
+})().catch(e=>document.body.textContent="Could not load game: "+e);
+</script>
