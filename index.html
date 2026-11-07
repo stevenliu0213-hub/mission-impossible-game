@@ -20,15 +20,15 @@
     html=html.split(before).join(after);
   }
   all("keysFound:0,laserCooldown:0,legendaryKey:false",
-      "keysFound:0,laserCooldown:0,legendaryKey:false,respawnsLeft:4",2);
+      "keysFound:0,laserCooldown:0,legendaryKey:false,respawnsLeft:7",2);
   once("abilityText.textContent=dashTxt+' · '+laserTxt;",
-       "abilityText.textContent=dashTxt+' · '+laserTxt+' · Respawns '+player.respawnsLeft+'/4';");
+       "abilityText.textContent=dashTxt+' · '+laserTxt+' · Respawns '+player.respawnsLeft+'/7';");
   once("    const spawn=getNearestSafePlatformSpawn();",
 `    if(player.respawnsLeft<=0){
       player.dead=true;
       player.hearts=0;
       updateHUD();
-      finish(false,'ALL FOUR RESPAWNS USED');
+      finish(false,'ALL SEVEN RESPAWNS USED');
       return;
     }
     player.respawnsLeft--;
