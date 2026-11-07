@@ -9,4 +9,83 @@
     canvas.width=W*dpr; canvas.height=H*dpr;
     canvas.style.width=innerWidth+'px'; canvas.style.height=innerHeight+'px';
     ctx.setTransform(dpr,0,0,dpr,0,0);
-  }`;h=h.replace(oldResize,newResize);const touch=`<style>#ipadTouch{display:none;position:fixed;z-index:99999;left:0;right:0;bottom:max(12px,env(safe-area-inset-bottom));padding:0 18px;justify-content:space-between;pointer-events:none}.itc{display:flex;gap:9px}.itb{pointer-events:auto;touch-action:none;-webkit-user-select:none;user-select:none;width:66px;height:66px;border-radius:50%;border:1px solid rgba(120,235,255,.5);background:rgba(5,15,38,.68);color:#fff;font:bold 19px Arial;display:flex;align-items:center;justify-content:center;box-shadow:0 0 18px rgba(70,220,255,.14);backdrop-filter:blur(8px)}.itb:active{transform:scale(.92)}@media(pointer:coarse),(hover:none){#ipadTouch{display:flex}}@media(pointer:coarse) and (max-height:700px){.itb{width:58px;height:58px;font-size:17px}#ipadTouch{padding:0 10px}}</style><div id="ipadTouch"><div class="itc"><button class="itb" data-code="ArrowLeft">◀</button><button class="itb" data-code="ArrowRight">▶</button></div><div class="itc"><button class="itb" data-code="ArrowDown">✦</button><button class="itb" data-code="KeyS">S</button><button class="itb" data-code="KeyL">L</button><button class="itb" data-code="Space">⬆</button></div></div><script>(()=>{const fire=(type,code)=>window.dispatchEvent(new KeyboardEvent(type,{code,bubbles:true}));document.querySelectorAll('#ipadTouch .itb').forEach(b=>{const c=b.dataset.code;const on=e=>{e.preventDefault();fire('keydown',c)};const off=e=>{e.preventDefault();fire('keyup',c)};b.addEventListener('pointerdown',on,{passive:false});b.addEventListener('pointerup',off,{passive:false});b.addEventListener('pointercancel',off,{passive:false});b.addEventListener('pointerleave',off,{passive:false});b.addEventListener('contextmenu',e=>e.preventDefault())});document.getElementById('ipadTouch').addEventListener('touchmove',e=>e.preventDefault(),{passive:false})})()<\/script>`;h=h.replace(/<\/body>/i,touch+'</body>');document.open();document.write(h);document.close()})().catch(e=>document.body.textContent='Could not load game: '+e)</script>
+  }`;h=h.replace(oldResize,newResize);h=(function patchGame(html){
+  function once(before,after){
+    if(!html.includes(before)) throw Error("Missing gameplay patch target: "+before.slice(0,80));
+    html=html.replace(before,after);
+  }
+  function all(before,after,expected){
+    let n=html.split(before).length-1;
+    if(n!==expected) throw Error("Wrong gameplay patch count: "+before.slice(0,65)+" ("+n+")");
+    html=html.split(before).join(after);
+  }
+  all("keysFound:0,laserCooldown:0,legendaryKey:false",
+      "keysFound:0,laserCooldown:0,legendaryKey:false,respawnsLeft:4",2);
+  once("abilityText.textContent=dashTxt+' · '+laserTxt;",
+       "abilityText.textContent=dashTxt+' · '+laserTxt+' · Respawns '+player.respawnsLeft+'/4';");
+  once("    const spawn=getNearestSafePlatformSpawn();",
+`    if(player.respawnsLeft<=0){
+      player.dead=true;
+      player.hearts=0;
+      updateHUD();
+      finish(false,'ALL FOUR RESPAWNS USED');
+      return;
+    }
+    player.respawnsLeft--;
+    const openingPlatform=world.platforms.find(p=>p.x<=110 && 110<p.x+p.w) || world.platforms[0];
+    const spawn={x:110,y:openingPlatform?openingPlatform.y-player.h:538};`);
+  once("    showMessage(reason+' — respawned on nearest safe platform',1.8);",
+       "    showMessage(reason+' — level start ('+player.respawnsLeft+' respawns left)',2.0);");
+  once("    if(player.y>H+220){",
+`    for(const h of world.hazards){
+      if((h.type==='lava'||h.type==='water') && player.vy>=0 &&
+         player.x+player.w>h.x && player.x<h.x+h.w &&
+         oldY+player.h<=h.y+12 && player.y+player.h>=h.y){
+        player.y=h.y-player.h; player.vy=0; player.onGround=true; player.jumpsUsed=0;
+        break;
+      }
+    }
+    if(player.y>H+220){`);
+  once("    for(const h of world.hazards){\n      if(hit(player,h)){",
+`    for(const h of world.hazards){
+      const standingOnLiquid=(h.type==='lava'||h.type==='water') &&
+        player.x+player.w>h.x && player.x<h.x+h.w &&
+        Math.abs(player.y+player.h-h.y)<=3;
+      if(hit(player,h)||standingOnLiquid){`);
+  once("if(e.active && e.hazardTimer<=0){",
+       "if(e.type!=='boss' && e.active && e.hazardTimer<=0){");
+  once("if(e.chasing && e.hazardTimer<=0){",
+       "if(e.type!=='boss' && e.chasing && e.hazardTimer<=0){");
+  once("          if(hit(e,h)){\n            let dmg=0;",
+`          const onLiquidSurface=(h.type==='lava'||h.type==='water') &&
+            e.x+e.w>h.x && e.x<h.x+h.w && Math.abs(e.y+e.h-h.y)<=3;
+          if(hit(e,h)||onLiquidSurface){
+            let dmg=0;`);
+  once("      // If an enemy falls far below the world, remove it. Key carriers still drop their key safely.",
+`      // Lava and toxic water support enemies from above.
+      for(const h of world.hazards){
+        if((h.type==='lava'||h.type==='water') && e.vy>=0 &&
+           e.x+e.w>h.x && e.x<h.x+h.w &&
+           prevEnemyY+e.h<=h.y+12 && e.y+e.h>=h.y){
+          e.y=h.y-e.h; e.vy=0; e.onGround=true;
+          break;
+        }
+      }
+      // If an enemy falls far below the world, remove it. Key carriers still drop their key safely.`);
+  once("      if(e.y>H+260){\n        e.alive=false;",
+`      if(e.y>H+260){
+        if(e.type==='boss'){
+          const safe=world.platforms.filter(p=>p.w>e.w+24)
+            .sort((a,b)=>Math.abs((a.x+a.w/2)-e.homeX)-Math.abs((b.x+b.w/2)-e.homeX))[0];
+          if(safe){
+            e.x=Math.max(safe.x+10,Math.min(safe.x+safe.w-e.w-10,e.homeX));
+            e.y=safe.y-e.h;
+          }else{
+            e.x=e.homeX; e.y=590-e.h;
+          }
+          e.vy=0; e.onGround=true; e.jumpCooldown=1;
+          continue;
+        }
+        e.alive=false;`);
+  return html;
+})(h);const touch=`<style>#ipadTouch{display:none;position:fixed;z-index:99999;left:0;right:0;bottom:max(12px,env(safe-area-inset-bottom));padding:0 18px;justify-content:space-between;pointer-events:none}.itc{display:flex;gap:9px}.itb{pointer-events:auto;touch-action:none;-webkit-user-select:none;user-select:none;width:66px;height:66px;border-radius:50%;border:1px solid rgba(120,235,255,.5);background:rgba(5,15,38,.68);color:#fff;font:bold 19px Arial;display:flex;align-items:center;justify-content:center;box-shadow:0 0 18px rgba(70,220,255,.14);backdrop-filter:blur(8px)}.itb:active{transform:scale(.92)}@media(pointer:coarse),(hover:none){#ipadTouch{display:flex}}@media(pointer:coarse) and (max-height:700px){.itb{width:58px;height:58px;font-size:17px}#ipadTouch{padding:0 10px}}</style><div id="ipadTouch"><div class="itc"><button class="itb" data-code="ArrowLeft">◀</button><button class="itb" data-code="ArrowRight">▶</button></div><div class="itc"><button class="itb" data-code="ArrowDown">✦</button><button class="itb" data-code="KeyS">S</button><button class="itb" data-code="KeyL">L</button><button class="itb" data-code="Space">⬆</button></div></div><script>(()=>{const fire=(type,code)=>window.dispatchEvent(new KeyboardEvent(type,{code,bubbles:true}));document.querySelectorAll('#ipadTouch .itb').forEach(b=>{const c=b.dataset.code;const on=e=>{e.preventDefault();fire('keydown',c)};const off=e=>{e.preventDefault();fire('keyup',c)};b.addEventListener('pointerdown',on,{passive:false});b.addEventListener('pointerup',off,{passive:false});b.addEventListener('pointercancel',off,{passive:false});b.addEventListener('pointerleave',off,{passive:false});b.addEventListener('contextmenu',e=>e.preventDefault())});document.getElementById('ipadTouch').addEventListener('touchmove',e=>e.preventDefault(),{passive:false})})()<\/script>`;h=h.replace(/<\/body>/i,touch+'</body>');document.open();document.write(h);document.close()})().catch(e=>document.body.textContent='Could not load game: '+e)</script>
