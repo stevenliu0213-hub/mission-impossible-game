@@ -93,18 +93,29 @@
   rep("  let bestScore=0;",`  let bestScore=0;
   let playerName='',runSaved=false,runStartedAt=null,runElapsedMs=null;
   function formatWinTime(ms){if(!Number.isFinite(ms)||ms<0)return '—';const sec=Math.floor(ms/1000),h=Math.floor(sec/3600),m=Math.floor(sec/60)%60,ss=String(sec%60).padStart(2,'0');return h?h+':'+String(m).padStart(2,'0')+':'+ss:Math.floor(sec/60)+':'+ss;}
+  function elapsedTime(row){
+    const ms=Number.isFinite(row.elapsedMs)?row.elapsedMs:row.timeToWinMs;
+    return Number.isFinite(ms)&&ms>=0?ms:Infinity;
+  }
   function winningTime(row){
     if(!row.win)return Infinity;
     const ms=Number.isFinite(row.timeToWinMs)?row.timeToWinMs:row.elapsedMs;
     return Number.isFinite(ms)&&ms>=0?ms:Infinity;
   }
   function rankRuns(a,b){
-    const aw=winningTime(a),bw=winningTime(b);
     const group=row=>Number.isFinite(winningTime(row))?0:row.win?1:2;
     const g=group(a)-group(b);
     if(g)return g;
-    if(Number.isFinite(aw)&&Number.isFinite(bw)&&aw!==bw)return aw-bw;
-    return b.score-a.score||(b.level||0)-(a.level||0);
+    if(group(a)===0){
+      const diff=winningTime(a)-winningTime(b);
+      if(diff)return diff;
+    }else if(group(a)===2){
+      const progress=(b.level||0)-(a.level||0);
+      if(progress)return progress;
+      const at=elapsedTime(a),bt=elapsedTime(b);
+      if(at!==bt)return at<bt?-1:1;
+    }
+    return b.score-a.score;
   }
   let scores=[];
   const scoreKey='missionImpossible.namedLeaderboard.v1';
@@ -120,6 +131,7 @@
     try{localStorage.setItem(scoreKey,JSON.stringify(scores))}catch(_){}
   }
   function setupNamedBoard(button){
+    scores.sort(rankRuns);
     const wrap=document.createElement('section');
     wrap.className='namedBoard';
     const label=document.createElement('label');
@@ -127,17 +139,17 @@
     const name=document.createElement('input');
     name.type='text'; name.id='playerNameInput'; name.name='playerName'; name.maxLength=24; name.required=true; name.placeholder='e.g. Alex';name.autocomplete='nickname';name.value=playerName; label.htmlFor=name.id;
     label.appendChild(name);const entry=document.createElement('section');entry.className='namedEntry';entry.appendChild(label);const title=card.querySelector('h2');if(title)title.after(entry);else card.prepend(entry);
-    const heading=document.createElement('h3');heading.textContent='FASTEST MISSIONS — TOP 10';wrap.appendChild(heading);
-    const rule=document.createElement('p');rule.style.cssText='font-size:11px;color:#a9ddea;margin:4px 0 8px';rule.textContent='Fastest completed missions rank first. Score breaks ties. Unfinished runs rank below winners.';wrap.appendChild(rule);
-    const columns=document.createElement('div');columns.className='scoreColumns';columns.innerHTML='<span>Player / Level</span><span>Score</span><span>Time played / to win</span>';wrap.appendChild(columns);
+    const heading=document.createElement('h3');heading.textContent='LEADERBOARD — FASTEST WINS FIRST';wrap.appendChild(heading);
+    const rule=document.createElement('p');rule.style.cssText='font-size:11px;color:#a9ddea;margin:4px 0 8px';rule.textContent='Winning times rank first, shortest to longest. Score breaks exact time ties. Failed runs come after wins and rank by level reached, then shortest attempt time.';wrap.appendChild(rule);
+    const columns=document.createElement('div');columns.className='scoreColumns';columns.innerHTML='<span>Player / Result</span><span>Time</span><span>Score</span>';wrap.appendChild(columns);
     const list=document.createElement('ol');
     if(!scores.length){const empty=document.createElement('li');empty.textContent='No scores yet — be the first!';list.appendChild(empty);}
     scores.forEach(row=>{
       const li=document.createElement('li'),who=document.createElement('span'),points=document.createElement('b');
-      who.textContent=row.name+' · '+(row.win?'Complete':'Level '+row.level);
+      who.textContent=row.name+' · '+(row.win?'WON':'DNF · L'+row.level);
       points.textContent=row.score.toLocaleString();
-      const time=document.createElement('span');time.className='winTime';time.textContent=Number.isFinite(row.elapsedMs)?formatWinTime(row.elapsedMs):Number.isFinite(row.timeToWinMs)?formatWinTime(row.timeToWinMs):'Not recorded';time.title=row.win?'Time to win':'Time played before defeat';
-      li.append(who,points,time);list.appendChild(li);
+      const time=document.createElement('span');time.className='winTime';const ms=row.win?winningTime(row):elapsedTime(row);time.textContent=Number.isFinite(ms)?formatWinTime(ms)+'.'+String(Math.floor(ms%1000/10)).padStart(2,'0'):'Not recorded';time.title=row.win?'Time to win':'Time played before defeat';
+      li.append(who,time,points);list.appendChild(li);
     });
     wrap.appendChild(list);
     button.before(wrap);
@@ -233,7 +245,7 @@
   .namedEntry input:focus{outline:2px solid #65f7ff;outline-offset:2px}.namedBoard h3{font-size:12px;letter-spacing:.12em;color:#ffd85e;margin:14px 0 5px}
   .namedBoard ol{margin:0;padding:0 0 0 26px;max-height:152px;overflow:auto;font-size:13px}
   .namedBoard li{padding:4px 4px 4px 0;color:#d7f6ff;border-bottom:1px solid #26334a}
-  .namedBoard li b{color:#ffdb77;text-align:right}.scoreColumns,.namedBoard li{display:grid;grid-template-columns:minmax(0,1fr) 72px 82px;gap:8px;align-items:center}.scoreColumns{font-size:10px;color:#8cc7dc;margin-left:26px;padding:5px 4px 5px 0}.scoreColumns span:not(:first-child),.winTime{text-align:right}.winTime{font-variant-numeric:tabular-nums;color:#9dffc9;overflow-wrap:anywhere}.namedBoard li>span:first-child{overflow-wrap:anywhere}.namedBoard li{position:relative;counter-increment:scoreRank}.namedBoard ol{counter-reset:scoreRank}.namedBoard li:before{content:counter(scoreRank) '.';position:absolute;right:calc(100% + 5px);color:#9debf2}
+  .namedBoard li b{color:#ffdb77;text-align:right}.scoreColumns,.namedBoard li{display:grid;grid-template-columns:minmax(0,1fr) 94px 68px;gap:8px;align-items:center}.scoreColumns{font-size:10px;color:#8cc7dc;margin-left:26px;padding:5px 4px 5px 0}.scoreColumns span:not(:first-child),.winTime{text-align:right}.winTime{font-variant-numeric:tabular-nums;color:#9dffc9;overflow-wrap:anywhere}.namedBoard li>span:first-child{overflow-wrap:anywhere}.namedBoard li{position:relative;counter-increment:scoreRank}.namedBoard ol{counter-reset:scoreRank}.namedBoard li:before{content:counter(scoreRank) '.';position:absolute;right:calc(100% + 5px);color:#9debf2}
   .nameError{color:#ff8998;font-size:12px;margin-top:4px}
   </style></head>`);
   return html;
