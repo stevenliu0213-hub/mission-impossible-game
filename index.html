@@ -91,7 +91,8 @@
 })(h);{const before="player.energy=Math.min(100,player.energy+gain);",after="player.energy=f.type==='orb'?100:Math.min(100,player.energy+gain);";if(!h.includes(before))throw Error('Energy orb pickup rule not found');h=h.replace(before,after);}{const before="    for(const f of world.foods){\n      f.spin+=dt*4;\n      if(!f.taken && hit(player,{x:f.x-10,y:f.y-10,w:44,h:44})){\n        f.taken=true;",after="    for(const f of world.foods){\n      f.spin+=dt*4;\n      const touchingFood=hit(player,{x:f.x-10,y:f.y-10,w:44,h:44});\n      if(f.type==='orb' && f.taken && performance.now()>=f.respawnAt){\n        f.taken=false;\n        f.respawnAt=0;\n        f.waitForExit=touchingFood;\n      }\n      if(!touchingFood)f.waitForExit=false;\n      if(!f.taken && !f.waitForExit && touchingFood){\n        f.taken=true;\n        if(f.type==='orb')f.respawnAt=performance.now()+5000;";if(h.split(before).length!==2)throw Error('Orb respawn rule not found');h=h.replace(before,after);}{const oldPlatform="  function drawPlatform(p){\n    const x=p.x-cameraX;\n    if(x+p.w<0||x>W)return;\n    const grad=ctx.createLinearGradient(0,p.y,0,p.y+p.h);\n    grad.addColorStop(0,'#1a2f52');grad.addColorStop(1,'#07101f');\n    ctx.fillStyle=grad;ctx.fillRect(x,p.y,p.w,p.h);\n    neonLine(x,p.y,x+p.w,p.y,'#65f7ff',2,.55);\n    ctx.strokeStyle='rgba(182,108,255,.16)';\n    for(let i=24;i<p.w;i+=48){ctx.beginPath();ctx.moveTo(x+i,p.y+8);ctx.lineTo(x+i-18,p.y+p.h);ctx.stroke();}\n  }",newPlatform="  function drawPlatform(p,t=0){\n  const x=p.x-cameraX,y=p.y,w=p.w,h=p.h;\n  if(x+w<0||x>W)return;\n  const palettes=[\n    ['#124b98','#236fd1','#071d48','#68c9ff','#b7ecff','#123c7c','#43a0ef'],\n    ['#085b3b','#24ac68','#032c21','#55ffad','#c9ffe0','#08643f','#31d48c'],\n    ['#ad6d0d','#efbf38','#493008','#fff088','#fffbd4','#a37517','#ffe05c'],\n    ['#52218f','#a14cf0','#260e53','#d798ff','#f5deff','#6c33b3','#bf7bff'],\n    ['#840d35','#e63859','#38091f','#ff6480','#ffd2dc','#a5183e','#fa5577']\n  ];\n  const [base,mid,deep,edge,light,facet,bright]=palettes[(world.level||1)-1]||palettes[0];\n  const time=t*.001;\n  ctx.save();\n  const g=ctx.createLinearGradient(x,y,x,y+h);\n  g.addColorStop(0,mid);g.addColorStop(.22,base);g.addColorStop(1,deep);\n  ctx.fillStyle=g;ctx.fillRect(x,y,w,h);\n  ctx.beginPath();ctx.rect(x,y,w,h);ctx.clip();\n  const start=Math.max(0,Math.floor(-x/64)*64);\n  const end=Math.min(w,W-x+64);\n  for(let i=start;i<end;i+=64){\n    const a=x+i,b=Math.min(x+w,a+64);\n    const z=Math.min(h,Math.max(12,h*.64));\n    const m=(a+b)*.5;\n    ctx.globalAlpha=.65;\n    ctx.fillStyle=facet;\n    ctx.beginPath();ctx.moveTo(a,y+3);ctx.lineTo(m,y+z);ctx.lineTo(a,y+h);ctx.closePath();ctx.fill();\n    ctx.fillStyle=bright;ctx.globalAlpha=.33;\n    ctx.beginPath();ctx.moveTo(a,y+3);ctx.lineTo(b,y+3);ctx.lineTo(m,y+z);ctx.closePath();ctx.fill();\n    ctx.fillStyle=deep;ctx.globalAlpha=.55;\n    ctx.beginPath();ctx.moveTo(m,y+z);ctx.lineTo(b,y+3);ctx.lineTo(b,y+h);ctx.closePath();ctx.fill();\n    ctx.globalAlpha=.42;ctx.strokeStyle=edge;ctx.lineWidth=.8;\n    ctx.beginPath();ctx.moveTo(a,y+3);ctx.lineTo(m,y+z);ctx.lineTo(b,y+3);ctx.moveTo(m,y+z);ctx.lineTo(a,y+h);ctx.stroke();\n    if(world.level>=2 && b-a>12){\n      const sx=a+(b-a)*.28,sy=y+Math.min(h-5,10+(i/64%3)*5);\n      const pulse=Math.pow(.5+.5*Math.sin(time*2.8+p.x*.019+i*.071),5);\n      const r=1.5+4.5*pulse;\n      ctx.globalAlpha=.25+.75*pulse;ctx.fillStyle=light;\n      ctx.shadowColor=edge;ctx.shadowBlur=9*pulse;\n      ctx.beginPath();ctx.moveTo(sx-r,sy);ctx.lineTo(sx-1,sy-1);ctx.lineTo(sx,sy-r*1.4);ctx.lineTo(sx+1,sy-1);ctx.lineTo(sx+r,sy);ctx.lineTo(sx+1,sy+1);ctx.lineTo(sx,sy+r*1.4);ctx.lineTo(sx-1,sy+1);ctx.closePath();ctx.fill();ctx.shadowBlur=0;\n    }\n  }\n  ctx.globalAlpha=1;\n  const shine=ctx.createLinearGradient(x,y,x,y+Math.min(h,14));\n  shine.addColorStop(0,light);shine.addColorStop(.3,edge);shine.addColorStop(1,base);\n  ctx.fillStyle=shine;ctx.fillRect(x,y,w,Math.min(h,5));\n  ctx.restore();\n  neonLine(x,y,x+w,y,edge,2,.82);\n  // Ruby flames are decorative paint only: no hazards, hitboxes, or damage.\n  if(world.level===5){\n    ctx.save();\n    const first=Math.max(14,Math.ceil((-x-30)/85)*85+14);\n    for(let i=first;i<w-12 && x+i<W+25;i+=85){\n      const fx=x+i,phase=time*5+p.x*.013+i*.11;\n      const fh=12+6*(.5+.5*Math.sin(phase));\n      const sway=3*Math.sin(phase*.8);\n      ctx.globalAlpha=.68;\n      const fire=ctx.createLinearGradient(fx,y-fh,fx,y);\n      fire.addColorStop(0,'#ff5475');fire.addColorStop(.55,'#ff7041');fire.addColorStop(1,'#ffcd76');\n      ctx.fillStyle=fire;ctx.shadowColor='#ff4969';ctx.shadowBlur=9;\n      ctx.beginPath();ctx.moveTo(fx-8,y);ctx.bezierCurveTo(fx-13,y-fh*.42,fx-2,y-fh*.55,fx-3+sway,y-fh);ctx.bezierCurveTo(fx+9,y-fh*.66,fx+2,y-fh*.32,fx+6,y-fh*.52);ctx.quadraticCurveTo(fx+13,y-fh*.12,fx+7,y);ctx.closePath();ctx.fill();\n      ctx.shadowBlur=0;ctx.globalAlpha=.88;ctx.fillStyle='#ffe9a8';\n      ctx.beginPath();ctx.moveTo(fx-3,y);ctx.quadraticCurveTo(fx-5,y-fh*.27,fx+sway*.4,y-fh*.55);ctx.quadraticCurveTo(fx+6,y-fh*.2,fx+3,y);ctx.closePath();ctx.fill();\n    }\n    ctx.restore();\n  }\n}";if(h.split(oldPlatform).length!==2)throw Error('Platform drawing rule not found');h=h.replace(oldPlatform,newPlatform);const call='for(const p of world.platforms)drawPlatform(p);';if(h.split(call).length!==2)throw Error('Platform animation call not found');h=h.replace(call,'for(const p of world.platforms)drawPlatform(p,t);');}h=(function checkpointAndScores(html){
   function rep(a,b){if(html.split(a).length!==2)throw Error("Checkpoint/leaderboard patch target: "+a.slice(0,90));html=html.replace(a,b);}
   rep("  let bestScore=0;",`  let bestScore=0;
-  let playerName='',runSaved=false;
+  let playerName='',runSaved=false,runStartedAt=0,runElapsedMs=null;
+  function formatWinTime(ms){if(!Number.isFinite(ms)||ms<0)return '—';const sec=Math.floor(ms/1000),h=Math.floor(sec/3600),m=Math.floor(sec/60)%60,ss=String(sec%60).padStart(2,'0');return h?h+':'+String(m).padStart(2,'0')+':'+ss:Math.floor(sec/60)+':'+ss;}
   let scores=[];
   const scoreKey='missionImpossible.namedLeaderboard.v1';
   try { const old=JSON.parse(localStorage.getItem(scoreKey)||'[]'); if(Array.isArray(old)) scores=old.filter(r=>r&&typeof r.name==='string'&&Number.isFinite(r.score)).sort((a,b)=>b.score-a.score).slice(0,10); }catch(_){}
@@ -99,7 +100,8 @@
   function saveNamedScore(win){
     if(runSaved||!playerName)return;
     runSaved=true;
-    scores.push({name:playerName,score:Math.max(0,Math.floor(player.score||0)),level:world.level,win:!!win});
+    runElapsedMs=win?Math.max(0,performance.now()-runStartedAt):null;
+    scores.push({name:playerName,score:Math.max(0,Math.floor(player.score||0)),level:world.level,win:!!win,timeToWinMs:runElapsedMs});
     scores.sort((a,b)=>b.score-a.score||Number(b.win)-Number(a.win)||b.level-a.level);
     scores=scores.slice(0,10);
     try{localStorage.setItem(scoreKey,JSON.stringify(scores))}catch(_){}
@@ -113,23 +115,25 @@
     name.type='text'; name.id='playerNameInput'; name.name='playerName'; name.maxLength=24; name.required=true; name.placeholder='e.g. Alex';name.autocomplete='nickname';name.value=playerName; label.htmlFor=name.id;
     label.appendChild(name);const entry=document.createElement('section');entry.className='namedEntry';entry.appendChild(label);const title=card.querySelector('h2');if(title)title.after(entry);else card.prepend(entry);
     const heading=document.createElement('h3');heading.textContent='HIGH SCORES — TOP 10';wrap.appendChild(heading);
+    const columns=document.createElement('div');columns.className='scoreColumns';columns.innerHTML='<span>Player / Level</span><span>Score</span><span>Time to win</span>';wrap.appendChild(columns);
     const list=document.createElement('ol');
     if(!scores.length){const empty=document.createElement('li');empty.textContent='No scores yet — be the first!';list.appendChild(empty);}
     scores.forEach(row=>{
       const li=document.createElement('li'),who=document.createElement('span'),points=document.createElement('b');
       who.textContent=row.name+' · '+(row.win?'Complete':'Level '+row.level);
       points.textContent=row.score.toLocaleString();
-      li.append(who,points);list.appendChild(li);
+      const time=document.createElement('span');time.className='winTime';time.textContent=row.win?formatWinTime(row.timeToWinMs):'—';
+      li.append(who,points,time);list.appendChild(li);
     });
     wrap.appendChild(list);
     button.before(wrap);
     const error=document.createElement('div');error.className='nameError';error.setAttribute('role','alert');entry.appendChild(error);
-    if(button.id==='againBtn'){const result=document.createElement('p');result.className='namedResult';result.textContent='Score recorded for '+playerName+': '+Math.floor(player.score||0).toLocaleString()+' points';entry.before(result);}
+    if(button.id==='againBtn'){const result=document.createElement('p');result.className='namedResult';result.textContent='Score recorded for '+playerName+': '+Math.floor(player.score||0).toLocaleString()+' points'+(runElapsedMs!==null?' · Time to win: '+formatWinTime(runElapsedMs):'');entry.before(result);}
     const original=button.onclick;
     button.onclick=()=>{
       const entered=name.value.trim();
       if(!entered){error.textContent='Enter your name to begin.';name.focus();return;}
-      playerName=entered.slice(0,24);runSaved=false;
+      playerName=entered.slice(0,24);runSaved=false;runStartedAt=performance.now();runElapsedMs=null;
       for(const code of Object.keys(keys))keys[code]=false;
       original.call(button);
     };
@@ -215,7 +219,7 @@
   .namedEntry input:focus{outline:2px solid #65f7ff;outline-offset:2px}.namedBoard h3{font-size:12px;letter-spacing:.12em;color:#ffd85e;margin:14px 0 5px}
   .namedBoard ol{margin:0;padding:0 0 0 26px;max-height:152px;overflow:auto;font-size:13px}
   .namedBoard li{padding:4px 4px 4px 0;color:#d7f6ff;border-bottom:1px solid #26334a}
-  .namedBoard li b{float:right;color:#ffdb77}
+  .namedBoard li b{color:#ffdb77;text-align:right}.scoreColumns,.namedBoard li{display:grid;grid-template-columns:minmax(0,1fr) 72px 82px;gap:8px;align-items:center}.scoreColumns{font-size:10px;color:#8cc7dc;margin-left:26px;padding:5px 4px 5px 0}.scoreColumns span:not(:first-child),.winTime{text-align:right}.winTime{font-variant-numeric:tabular-nums;color:#9dffc9}.namedBoard li>span:first-child{overflow-wrap:anywhere}.namedBoard li{position:relative;counter-increment:scoreRank}.namedBoard ol{counter-reset:scoreRank}.namedBoard li:before{content:counter(scoreRank) '.';position:absolute;right:calc(100% + 5px);color:#9debf2}
   .nameError{color:#ff8998;font-size:12px;margin-top:4px}
   </style></head>`);
   return html;
