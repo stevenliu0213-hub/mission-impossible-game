@@ -20,15 +20,15 @@
     html=html.split(before).join(after);
   }
   all("keysFound:0,laserCooldown:0,legendaryKey:false",
-      "keysFound:0,laserCooldown:0,legendaryKey:false,respawnsLeft:7",2);
+      "keysFound:0,laserCooldown:0,legendaryKey:false,respawnsLeft:10",2);
   once("abilityText.textContent=dashTxt+' · '+laserTxt;",
-       "abilityText.textContent=dashTxt+' · '+laserTxt+' · Respawns '+player.respawnsLeft+'/7';");
+       "abilityText.textContent=dashTxt+' · '+laserTxt+' · Respawns '+player.respawnsLeft+'/10';");
   once("    const spawn=getNearestSafePlatformSpawn();",
 `    if(player.respawnsLeft<=0){
       player.dead=true;
       player.hearts=0;
       updateHUD();
-      finish(false,'ALL SEVEN RESPAWNS USED');
+      finish(false,'ALL TEN RESPAWNS USED');
       return;
     }
     player.respawnsLeft--;
@@ -187,7 +187,7 @@
     const startPlatform=world.platforms.find(p=>p.x<=110&&110<p.x+p.w)||world.platforms[0];
     player.checkpointX=110;player.checkpointY=startPlatform?startPlatform.y-player.h:500;
     cameraX=0; updateHUD();`);
-  rep("abilityText.textContent=dashTxt+' · '+laserTxt+' · Respawns '+player.respawnsLeft+'/7';","abilityText.textContent=dashTxt+' · '+laserTxt+' · Respawns '+player.respawnsLeft+'/7 · CP '+(world.checkpoints||[]).filter(c=>c.active).length+'/3';");
+  rep("abilityText.textContent=dashTxt+' · '+laserTxt+' · Respawns '+player.respawnsLeft+'/10';","abilityText.textContent=dashTxt+' · '+laserTxt+' · Respawns '+player.respawnsLeft+'/10 · CP '+(world.checkpoints||[]).filter(c=>c.active).length+'/3';");
   rep("    const openingPlatform=world.platforms.find(p=>p.x<=110 && 110<p.x+p.w) || world.platforms[0];\n    const spawn={x:110,y:openingPlatform?openingPlatform.y-player.h:538};",`    const spawn={x:player.checkpointX,y:player.checkpointY};
     player.onGround=false;player.jumpsUsed=0;player.dashTime=0;
     cameraX=Math.max(0,Math.min(world.width-W,spawn.x-W*.38));`);
