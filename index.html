@@ -108,10 +108,10 @@
     const wrap=document.createElement('section');
     wrap.className='namedBoard';
     const label=document.createElement('label');
-    label.textContent='PLAYER NAME';
+    label.textContent='Enter your name';
     const name=document.createElement('input');
-    name.type='text'; name.maxLength=24; name.required=true; name.placeholder='Enter your name';name.autocomplete='nickname';name.value=playerName;
-    label.appendChild(name);wrap.appendChild(label);
+    name.type='text'; name.id='playerNameInput'; name.name='playerName'; name.maxLength=24; name.required=true; name.placeholder='e.g. Alex';name.autocomplete='nickname';name.value=playerName; label.htmlFor=name.id;
+    label.appendChild(name);const entry=document.createElement('section');entry.className='namedEntry';entry.appendChild(label);const title=card.querySelector('h2');if(title)title.after(entry);else card.prepend(entry);
     const heading=document.createElement('h3');heading.textContent='HIGH SCORES — TOP 10';wrap.appendChild(heading);
     const list=document.createElement('ol');
     if(!scores.length){const empty=document.createElement('li');empty.textContent='No scores yet — be the first!';list.appendChild(empty);}
@@ -123,7 +123,8 @@
     });
     wrap.appendChild(list);
     button.before(wrap);
-    const error=document.createElement('div');error.className='nameError';error.setAttribute('role','alert');wrap.appendChild(error);
+    const error=document.createElement('div');error.className='nameError';error.setAttribute('role','alert');entry.appendChild(error);
+    if(button.id==='againBtn'){const result=document.createElement('p');result.className='namedResult';result.textContent='Score recorded for '+playerName+': '+Math.floor(player.score||0).toLocaleString()+' points';entry.before(result);}
     const original=button.onclick;
     button.onclick=()=>{
       const entered=name.value.trim();
@@ -209,9 +210,9 @@
   #overlay{z-index:100000;overflow:auto}
   #card{max-height:calc(100dvh - 28px);overflow:auto}
   .namedBoard{max-width:420px;margin:12px auto 4px;text-align:left}
-  .namedBoard label{display:block;font-size:11px;letter-spacing:.16em;color:#9debf2;font-weight:700}
-  .namedBoard input{box-sizing:border-box;width:100%;margin-top:5px;padding:10px 12px;border:1px solid #4c7993;border-radius:9px;background:#071127;color:#fff;font:16px Arial}
-  .namedBoard h3{font-size:12px;letter-spacing:.12em;color:#ffd85e;margin:14px 0 5px}
+  .namedEntry{max-width:420px;margin:16px auto;text-align:left;padding:12px;border:1px solid #65f7ff;border-radius:12px;background:#0a1934;box-shadow:0 0 18px #65f7ff33}.namedEntry label{display:block;font-size:17px;color:#c8f9ff;font-weight:800}.namedResult{color:#ffdb77;font-weight:bold}
+  .namedEntry input{box-sizing:border-box;width:100%;margin-top:5px;padding:10px 12px;border:1px solid #4c7993;border-radius:9px;background:#071127;color:#fff;font:16px Arial}
+  .namedEntry input:focus{outline:2px solid #65f7ff;outline-offset:2px}.namedBoard h3{font-size:12px;letter-spacing:.12em;color:#ffd85e;margin:14px 0 5px}
   .namedBoard ol{margin:0;padding:0 0 0 26px;max-height:152px;overflow:auto;font-size:13px}
   .namedBoard li{padding:4px 4px 4px 0;color:#d7f6ff;border-bottom:1px solid #26334a}
   .namedBoard li b{float:right;color:#ffdb77}
