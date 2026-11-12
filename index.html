@@ -219,4 +219,65 @@
   .nameError{color:#ff8998;font-size:12px;margin-top:4px}
   </style></head>`);
   return html;
+})(h);h=(function thronePatch(h){
+ const rep=(a,b)=>{if(h.split(a).length!==2)throw Error("Throne patch target missing: "+a.slice(0,100));h=h.replace(a,b)};
+ rep("{x:7280,y:520,w:320,h:200}","{x:7280,y:520,w:320,h:200,indestructible:true}");
+ rep("    treasureTotal.textContent=world.treasures.length;",`    world.throne=null;
+    if(world.level===5){
+      const p=world.platforms.find(p=>p.indestructible);
+      const warden=world.enemies.find(e=>e.type==='boss');
+      if(p&&warden){
+        world.throne={x:7500,y:p.y};
+        warden.x=world.throne.x-warden.w/2;warden.y=p.y-warden.h;
+        warden.homeX=warden.x;warden.min=warden.homeMin=p.x+12;
+        warden.max=warden.homeMax=p.x+p.w-warden.w-12;
+        warden.vy=0;warden.onGround=true;
+      }
+    }
+    treasureTotal.textContent=world.treasures.length;`);
+ rep("if(!overlaps || p.w<120){np.push(p);continue;}","if(p.indestructible || !overlaps || p.w<120){np.push(p);continue;}");
+ rep("    drawBeacons(t);",`    drawWardenThrone(t);
+    drawBeacons(t);`);
+ rep("  function draw(t){",`  function drawWardenThrone(t){
+    if(!world.throne)return;
+    const x=world.throne.x-cameraX,y=world.throne.y;
+    if(x<-180||x>W+180)return;
+    ctx.save();ctx.translate(x,y);
+    const polygon=(pts,fill,stroke,line=1)=>{
+      ctx.beginPath();pts.forEach(([a,b],i)=>i?ctx.lineTo(a,b):ctx.moveTo(a,b));ctx.closePath();
+      ctx.fillStyle=fill;ctx.fill();if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=line;ctx.stroke();}
+    };
+    const metal=ctx.createLinearGradient(-100,-140,95,0);
+    metal.addColorStop(0,'#e6c6aa');metal.addColorStop(.18,'#6f4852');metal.addColorStop(.42,'#211624');metal.addColorStop(.7,'#85606e');metal.addColorStop(1,'#170e1c');
+    const ruby=ctx.createLinearGradient(-65,-205,60,-25);
+    ruby.addColorStop(0,'#ff9da7');ruby.addColorStop(.22,'#bc163e');ruby.addColorStop(.52,'#590b2a');ruby.addColorStop(.76,'#f13d67');ruby.addColorStop(1,'#2c071a');
+    // Anchored ceremonial base; purely visual, never added to damage targets.
+    polygon([[-92,0],[-85,-13],[85,-13],[92,0]],metal,'#ffc28c',2);
+    polygon([[-76,-13],[-67,-26],[67,-26],[76,-13]],metal,'#a86062');
+    // Tall cut-crystal backrest and angular crown.
+    ctx.shadowColor='#fa385f';ctx.shadowBlur=17;
+    polygon([[-68,-29],[-83,-131],[-65,-158],[-48,-148],[-32,-191],[-13,-173],[0,-218],[15,-173],[33,-191],[49,-148],[65,-158],[83,-131],[68,-29]],ruby,'#ff827f',2);
+    ctx.shadowBlur=0;
+    polygon([[-63,-40],[-64,-125],[-29,-157],[0,-186],[29,-157],[64,-125],[63,-40]],'#320f26','#dd607a',2);
+    polygon([[-29,-157],[0,-186],[0,-99],[-46,-76]],'#762040','#ff6486');
+    polygon([[0,-186],[29,-157],[46,-76],[0,-99]],'#410c2d','#e46085');
+    polygon([[-46,-76],[0,-99],[46,-76],[29,-45],[-29,-45]],'#671331','#fa7790');
+    polygon([[-68,-29],[-58,-49],[58,-49],[68,-29]],metal,'#ffc28c',2);
+    polygon([[-79,-13],[-75,-66],[-89,-79],[-98,-66],[-92,-13]],metal,'#e1a47d',2);
+    polygon([[79,-13],[75,-66],[89,-79],[98,-66],[92,-13]],metal,'#e1a47d',2);
+    for(const a of [-89,89]){
+      polygon([[a,-79],[a-10,-91],[a,-108],[a+10,-91]],ruby,'#ffb4b8',1.5);
+      polygon([[a,-108],[a,-79],[a-10,-91]],'#ff5177',null);
+    }
+    // Crown jewel and engraved insignia.
+    ctx.shadowColor='#ff507f';ctx.shadowBlur=14;
+    polygon([[0,-185],[-12,-166],[0,-150],[12,-166]],'#ff466c','#ffe1c2',1.5);
+    polygon([[0,-185],[0,-150],[-12,-166]],'#ffb6c4',null);
+    ctx.shadowBlur=0;ctx.fillStyle='#ffe1bd';ctx.textAlign='center';ctx.font='bold 11px Arial';
+    ctx.fillText('WARDEN’S THRONE',0,-234);
+    ctx.font='bold 9px Arial';ctx.fillStyle='#ffd8d8';ctx.fillText('INDESTRUCTIBLE',0,-221);
+    ctx.restore();
+  }
+  function draw(t){`);
+ return h;
 })(h);const touch=`<style>#ipadTouch{display:none;position:fixed;z-index:99999;left:0;right:0;bottom:max(12px,env(safe-area-inset-bottom));padding:0 18px;justify-content:space-between;pointer-events:none}.itc{display:flex;gap:9px}.itb{pointer-events:auto;touch-action:none;-webkit-user-select:none;user-select:none;width:66px;height:66px;border-radius:50%;border:1px solid rgba(120,235,255,.5);background:rgba(5,15,38,.68);color:#fff;font:bold 19px Arial;display:flex;align-items:center;justify-content:center;box-shadow:0 0 18px rgba(70,220,255,.14);backdrop-filter:blur(8px)}.itb:active{transform:scale(.92)}@media(pointer:coarse),(hover:none){#ipadTouch{display:flex}}@media(pointer:coarse) and (max-height:700px){.itb{width:58px;height:58px;font-size:17px}#ipadTouch{padding:0 10px}}</style><div id="ipadTouch"><div class="itc"><button class="itb" data-code="ArrowLeft">◀</button><button class="itb" data-code="ArrowRight">▶</button></div><div class="itc"><button class="itb" data-code="ArrowDown">✦</button><button class="itb" data-code="KeyS">S</button><button class="itb" data-code="KeyL">L</button><button class="itb" data-code="Space">⬆</button></div></div><script>(()=>{const fire=(type,code)=>window.dispatchEvent(new KeyboardEvent(type,{code,bubbles:true}));document.querySelectorAll('#ipadTouch .itb').forEach(b=>{const c=b.dataset.code;const on=e=>{e.preventDefault();fire('keydown',c)};const off=e=>{e.preventDefault();fire('keyup',c)};b.addEventListener('pointerdown',on,{passive:false});b.addEventListener('pointerup',off,{passive:false});b.addEventListener('pointercancel',off,{passive:false});b.addEventListener('pointerleave',off,{passive:false});b.addEventListener('contextmenu',e=>e.preventDefault())});document.getElementById('ipadTouch').addEventListener('touchmove',e=>e.preventDefault(),{passive:false})})()<\/script>`;h=h.replace(/<\/body>/i,touch+'</body>');document.open();document.write(h);document.close()})().catch(e=>document.body.textContent='Could not load game: '+e)</script>
