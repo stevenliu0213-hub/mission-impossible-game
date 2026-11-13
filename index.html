@@ -319,4 +319,63 @@
   if(h.split(c).length!==2)throw Error('Timer update anchor missing');
   h=h.replace(c,c+"\n    document.getElementById('missionTimer').textContent=formatWinTime(runElapsedMs!==null?runElapsedMs:runStartedAt===null?0:Math.max(0,performance.now()-runStartedAt));");
   return h;
-})(h);h=h.replace('Highest score wins. Collect relics, food, defeat enemies, and use hazards creatively.','Fastest mission completion wins. Higher scores break ties.');const touch=`<style>#ipadTouch{display:none;position:fixed;z-index:99999;left:0;right:0;bottom:max(12px,env(safe-area-inset-bottom));padding:0 18px;justify-content:space-between;pointer-events:none}.itc{display:flex;gap:9px}.itb{pointer-events:auto;touch-action:none;-webkit-user-select:none;user-select:none;width:66px;height:66px;border-radius:50%;border:1px solid rgba(120,235,255,.5);background:rgba(5,15,38,.68);color:#fff;font:bold 19px Arial;display:flex;align-items:center;justify-content:center;box-shadow:0 0 18px rgba(70,220,255,.14);backdrop-filter:blur(8px)}.itb:active{transform:scale(.92)}#ipadTouch .itb{padding:0;flex-shrink:0}#ipadTouch .itb svg{width:70%;height:70%;pointer-events:none;filter:drop-shadow(0 0 4px #65f7ff66)}#ipadTouch .swordBtn{border-color:#80e6ff}#ipadTouch .laserBtn{border-color:#ff8bb9}#ipadTouch .laserBtn svg{filter:drop-shadow(0 0 4px #ff4b9299)}@media(pointer:coarse),(hover:none){#ipadTouch{display:flex}}@media(pointer:coarse) and (max-height:700px){.itb{width:58px;height:58px;font-size:17px}#ipadTouch{padding:0 10px}}</style><div id="ipadTouch"><div class="itc"><button class="itb" data-code="ArrowLeft">◀</button><button class="itb" data-code="ArrowRight">▶</button></div><div class="itc"><button class="itb" data-code="ArrowDown">✦</button><button type="button" class="itb swordBtn" data-code="KeyS" aria-label="Sword attack" title="Sword attack"><svg viewBox="0 0 48 48" aria-hidden="true" focusable="false"><path d="M12 34 8 38l3 3 4-4 4 3 4-4-5-5 17-17 7-11-11 7-17 17-5-5-4 4Z" fill="#9defff" stroke="#eaffff" stroke-width="1.5" stroke-linejoin="round"/><path d="m18 31 17-17 7-11-21 22Z" fill="#4388c7"/><path d="m9 25 14 14" stroke="#ffd477" stroke-width="4" stroke-linecap="round"/><path d="m16 34-8 8" stroke="#b8753e" stroke-width="5" stroke-linecap="round"/><path d="m7 41 3 3" stroke="#ffe6ad" stroke-width="3" stroke-linecap="round"/></svg></button><button type="button" class="itb laserBtn" data-code="KeyL" aria-label="Laser attack" title="Laser attack"><svg viewBox="0 0 48 48" aria-hidden="true" focusable="false"><path d="m5 30 10-10 11 4 5 5-12 12-6-4 4-7-8 5Z" fill="#395675" stroke="#9defff" stroke-width="1.5" stroke-linejoin="round"/><path d="m14 20 7-6 10 5-5 6Z" fill="#8eb5d8" stroke="#e5faff" stroke-width="1.3"/><path d="m26 22 18-17" stroke="#ff397f" stroke-width="9" stroke-linecap="round" opacity=".33"/><path d="m26 22 18-17" stroke="#ff5f9d" stroke-width="5" stroke-linecap="round"/><path d="m26 22 18-17" stroke="#fff4fc" stroke-width="2" stroke-linecap="round"/><path d="m41 2 1 7 5 2-7 1-2 6-1-7-6-2 7-1Z" fill="#fff2f8"/><circle cx="20" cy="27" r="2.2" fill="#ff8abd"/></svg></button><button class="itb" data-code="Space">⬆</button></div></div><script>(()=>{const fire=(type,code)=>window.dispatchEvent(new KeyboardEvent(type,{code,bubbles:true}));document.querySelectorAll('#ipadTouch .itb').forEach(b=>{const c=b.dataset.code;const on=e=>{e.preventDefault();fire('keydown',c)};const off=e=>{e.preventDefault();fire('keyup',c)};b.addEventListener('pointerdown',on,{passive:false});b.addEventListener('pointerup',off,{passive:false});b.addEventListener('pointercancel',off,{passive:false});b.addEventListener('pointerleave',off,{passive:false});b.addEventListener('contextmenu',e=>e.preventDefault())});document.getElementById('ipadTouch').addEventListener('touchmove',e=>e.preventDefault(),{passive:false})})()<\/script>`;h=h.replace(/<\/body>/i,touch+'</body>');document.open();document.write(h);document.close()})().catch(e=>document.body.textContent='Could not load game: '+e)</script>
+})(h);h=h.replace('Highest score wins. Collect relics, food, defeat enemies, and use hazards creatively.','Fastest mission completion wins. Higher scores break ties.');h=(function voidAndObstacles(h){
+ const rep=(a,b)=>{if(h.split(a).length!==2)throw Error("Terrain patch anchor missing: "+a.slice(0,100));h=h.replace(a,b)};
+ rep("    // Levels 1-4: three enemies carry the normal vault keys.",`    configureVoidTerrain();
+    // Levels 1-4: three enemies carry the normal vault keys.`);
+ rep("        if(unsafe) continue;\n        const d=Math.abs((sx+e.w/2)-targetX)",`        if(unsafe||world.platforms.some(q=>q.obstacle&&hit(box,q))) continue;
+        const d=Math.abs((sx+e.w/2)-targetX)`);
+ rep("  function buildWorld(level=1){",`  function configureVoidTerrain(){
+    world.voidGaps=[];
+    if(world.level<3)return;
+    const layouts={
+      3:{gaps:[560,1770,3060,4320,6090],blocks:[[2455,535],[5045,505]]},
+      4:{gaps:[420,3650,5810],blocks:[[2455,590]]},
+      5:{gaps:[360,3460,5550],blocks:[[2315,600]]}
+    };
+    const plan=layouts[world.level];
+    if(!plan)return;
+    const voids=new Set(plan.gaps);
+    world.voidGaps=world.hazards.filter(h=>(h.type==='lava'||h.type==='water')&&voids.has(h.x)).map(h=>({x:h.x,w:h.w,y:h.y}));
+    if(world.voidGaps.length!==plan.gaps.length)throw Error('Missing planned void section');
+    const clear=(x,w)=>world.voidGaps.every(g=>x+w<=g.x-240||x>=g.x+g.w+240);
+    // Remove liquid entirely at selected spans; nothing catches a falling player.
+    // Fire traps near these spans are removed, not moved onto the landing areas.
+    world.hazards=world.hazards.filter(h=>!((h.type==='lava'||h.type==='water')&&voids.has(h.x))&&(h.type!=='fire'||clear(h.x,h.w)));
+    for(const [x,y] of plan.blocks){
+      const w=44,hh=world.level===5?48:42;
+      const support=world.platforms.find(p=>p.y===y&&x>=p.x+55&&x+w<=p.x+p.w-55);
+      const obstacle={x,y:y-hh,w,h:hh,obstacle:true};
+      if(!support||!clear(x,w)||world.platforms.some(p=>hit(obstacle,p))||world.hazards.some(h=>hit(obstacle,h)))throw Error('Unsafe obstacle placement');
+      world.platforms.push(obstacle);
+    }
+  }
+  function buildWorld(level=1){`);
+ rep("  function draw(t){",`  function drawVoidTerrain(t){
+    for(const g of world.voidGaps||[]){
+      const x=g.x-cameraX;
+      if(x+g.w<0||x>W)continue;
+      ctx.save();
+      const top=g.y-9,bottom=Math.max(top+100,H+160);
+      const shade=ctx.createLinearGradient(0,top,0,bottom);
+      shade.addColorStop(0,'rgba(3,3,12,.30)');shade.addColorStop(.28,'rgba(2,2,9,.88)');shade.addColorStop(1,'#010106');
+      ctx.fillStyle=shade;ctx.fillRect(x,top,g.w,bottom-top);
+      ctx.font='bold 11px Arial';ctx.textAlign='center';ctx.shadowColor='#bcb4ff';ctx.shadowBlur=10;ctx.fillStyle='#d6ceff';
+      ctx.fillText('▼ VOID · JUMP ▼',x+g.w/2,g.y-12);
+      ctx.restore();
+    }
+  }
+  function drawBarrierMarks(){
+    for(const p of world.platforms){
+      if(!p.obstacle)continue;
+      const x=p.x-cameraX;if(x+p.w<0||x>W)continue;
+      ctx.save();ctx.strokeStyle='#ffd98a';ctx.lineWidth=2;ctx.shadowColor='#ffa840';ctx.shadowBlur=7;
+      for(let i=7;i<p.w-4;i+=12){ctx.beginPath();ctx.moveTo(x+i-4,p.y+10);ctx.lineTo(x+i,p.y+4);ctx.lineTo(x+i+4,p.y+10);ctx.stroke();}
+      ctx.restore();
+    }
+  }
+  function draw(t){`);
+ rep("    for(const h of world.hazards){drawHazard(h,t);drawHazardWarning(h,t);}","    drawVoidTerrain(t);\n    for(const h of world.hazards){drawHazard(h,t);drawHazardWarning(h,t);}");
+ rep("    for(const p of world.platforms)drawPlatform(p,t);","    for(const p of world.platforms)drawPlatform(p,t);\n    drawBarrierMarks();");
+ return h;
+})(h);const touch=`<style>#ipadTouch{display:none;position:fixed;z-index:99999;left:0;right:0;bottom:max(12px,env(safe-area-inset-bottom));padding:0 18px;justify-content:space-between;pointer-events:none}.itc{display:flex;gap:9px}.itb{pointer-events:auto;touch-action:none;-webkit-user-select:none;user-select:none;width:66px;height:66px;border-radius:50%;border:1px solid rgba(120,235,255,.5);background:rgba(5,15,38,.68);color:#fff;font:bold 19px Arial;display:flex;align-items:center;justify-content:center;box-shadow:0 0 18px rgba(70,220,255,.14);backdrop-filter:blur(8px)}.itb:active{transform:scale(.92)}#ipadTouch .itb{padding:0;flex-shrink:0}#ipadTouch .itb svg{width:70%;height:70%;pointer-events:none;filter:drop-shadow(0 0 4px #65f7ff66)}#ipadTouch .swordBtn{border-color:#80e6ff}#ipadTouch .laserBtn{border-color:#ff8bb9}#ipadTouch .laserBtn svg{filter:drop-shadow(0 0 4px #ff4b9299)}@media(pointer:coarse),(hover:none){#ipadTouch{display:flex}}@media(pointer:coarse) and (max-height:700px){.itb{width:58px;height:58px;font-size:17px}#ipadTouch{padding:0 10px}}</style><div id="ipadTouch"><div class="itc"><button class="itb" data-code="ArrowLeft">◀</button><button class="itb" data-code="ArrowRight">▶</button></div><div class="itc"><button class="itb" data-code="ArrowDown">✦</button><button type="button" class="itb swordBtn" data-code="KeyS" aria-label="Sword attack" title="Sword attack"><svg viewBox="0 0 48 48" aria-hidden="true" focusable="false"><path d="M12 34 8 38l3 3 4-4 4 3 4-4-5-5 17-17 7-11-11 7-17 17-5-5-4 4Z" fill="#9defff" stroke="#eaffff" stroke-width="1.5" stroke-linejoin="round"/><path d="m18 31 17-17 7-11-21 22Z" fill="#4388c7"/><path d="m9 25 14 14" stroke="#ffd477" stroke-width="4" stroke-linecap="round"/><path d="m16 34-8 8" stroke="#b8753e" stroke-width="5" stroke-linecap="round"/><path d="m7 41 3 3" stroke="#ffe6ad" stroke-width="3" stroke-linecap="round"/></svg></button><button type="button" class="itb laserBtn" data-code="KeyL" aria-label="Laser attack" title="Laser attack"><svg viewBox="0 0 48 48" aria-hidden="true" focusable="false"><path d="m5 30 10-10 11 4 5 5-12 12-6-4 4-7-8 5Z" fill="#395675" stroke="#9defff" stroke-width="1.5" stroke-linejoin="round"/><path d="m14 20 7-6 10 5-5 6Z" fill="#8eb5d8" stroke="#e5faff" stroke-width="1.3"/><path d="m26 22 18-17" stroke="#ff397f" stroke-width="9" stroke-linecap="round" opacity=".33"/><path d="m26 22 18-17" stroke="#ff5f9d" stroke-width="5" stroke-linecap="round"/><path d="m26 22 18-17" stroke="#fff4fc" stroke-width="2" stroke-linecap="round"/><path d="m41 2 1 7 5 2-7 1-2 6-1-7-6-2 7-1Z" fill="#fff2f8"/><circle cx="20" cy="27" r="2.2" fill="#ff8abd"/></svg></button><button class="itb" data-code="Space">⬆</button></div></div><script>(()=>{const fire=(type,code)=>window.dispatchEvent(new KeyboardEvent(type,{code,bubbles:true}));document.querySelectorAll('#ipadTouch .itb').forEach(b=>{const c=b.dataset.code;const on=e=>{e.preventDefault();fire('keydown',c)};const off=e=>{e.preventDefault();fire('keyup',c)};b.addEventListener('pointerdown',on,{passive:false});b.addEventListener('pointerup',off,{passive:false});b.addEventListener('pointercancel',off,{passive:false});b.addEventListener('pointerleave',off,{passive:false});b.addEventListener('contextmenu',e=>e.preventDefault())});document.getElementById('ipadTouch').addEventListener('touchmove',e=>e.preventDefault(),{passive:false})})()<\/script>`;h=h.replace(/<\/body>/i,touch+'</body>');document.open();document.write(h);document.close()})().catch(e=>document.body.textContent='Could not load game: '+e)</script>
