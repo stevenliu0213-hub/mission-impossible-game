@@ -122,7 +122,7 @@
   try { const old=JSON.parse(localStorage.getItem(scoreKey)||'[]'); if(Array.isArray(old)) scores=old.filter(r=>r&&typeof r.name==='string'&&Number.isFinite(r.score)).sort(rankRuns).slice(0,10); }catch(_){}
   // Configure ONLY the Supabase project URL and public publishable key, never a secret/service key.
   const publicBoardConfig={url:"https://xfpyintqlpewkxgldpyp.supabase.co",key:"sb_publishable_FHg6tCyvHOpVbmJt9ZtaMQ_qOaDzocH"};
-  let publicRows=null,publicStatus='',boardUi=null,syncBusy=false;
+  let publicRows=null,publicStatus='',boardUi=null,syncBusy=false,showLocalScores=false;
   const pendingKey='missionImpossible.publicPending.v1';
   function localRows(){
     try{const old=JSON.parse(localStorage.getItem(scoreKey)||'[]');return Array.isArray(old)?old.filter(r=>r&&typeof r.name==='string'&&Number.isFinite(r.score)).sort(rankRuns).slice(0,10):[];}catch(_){return [];}
@@ -131,32 +131,37 @@
   function writePending(rows){try{localStorage.setItem(pendingKey,JSON.stringify(rows));}catch(_){}}
   async function boardRequest(fn,body){
     const response=await fetch(publicBoardConfig.url+'/rest/v1/rpc/'+fn,{method:'POST',headers:{apikey:publicBoardConfig.key,'Content-Type':'application/json'},body:JSON.stringify(body||{}),cache:'no-store'});
-    if(!response.ok)throw Error('Leaderboard request failed ('+response.status+')');
+    if(!response.ok){let detail='';try{const e=await response.json();detail=e.code?' · '+e.code:'';}catch(_){}throw Error('Leaderboard request failed ('+response.status+')'+detail);}
     return response.json();
   }
   async function refreshPublicBoard(){
     if(!publicBoardConfig||syncBusy)return;
     syncBusy=true;
     try{
+      let uploadError=null;
       for(const row of pendingRows()){
+        try{
         await boardRequest('submit_mission_run',{run_id:row.id,player_name:row.name,points:row.score,reached_level:row.level,completed:row.win,duration_ms:Math.round(row.elapsedMs)});
         writePending(pendingRows().filter(p=>p.id!==row.id));
+        }catch(e){uploadError=e;}
       }
       const data=await boardRequest('mission_leaderboard',{});
       if(!Array.isArray(data))throw Error('Invalid leaderboard response');
       publicRows=data.map(r=>({name:r.name,score:r.score,level:r.level,win:r.win,elapsedMs:r.elapsed_ms,timeToWinMs:r.win?r.elapsed_ms:null})).sort(rankRuns).slice(0,10);
-      publicStatus='Online · shared worldwide';
+      publicStatus='Online · shared worldwide · '+publicRows.length+' ranked runs'+(uploadError?' · Upload pending: '+uploadError.message:'');
     }catch(error){publicStatus='Public sync unavailable · '+error.message+' · scores saved locally';}
     finally{syncBusy=false;renderBoardRows();}
   }
   function renderBoardRows(){
     if(!boardUi||!boardUi.list.isConnected)return;
-    const {list,heading,status}=boardUi;
-    heading.textContent=publicBoardConfig&&publicRows!==null?'PUBLIC LEADERBOARD — TOP 10':'LOCAL LEADERBOARD — TOP 10';
+    const {list,heading,status,toggle,importButton}=boardUi;
+    heading.textContent=showLocalScores||publicRows===null?'LOCAL LEADERBOARD — TOP 10':'PUBLIC LEADERBOARD — TOP 10';
     status.textContent=publicBoardConfig?(publicStatus||'Connecting to public leaderboard…'):'This browser only · public database not connected';
-    const rows=publicBoardConfig&&publicRows!==null?publicRows:scores;
+    const rows=!showLocalScores&&publicBoardConfig&&publicRows!==null?publicRows:scores;
+    if(toggle)toggle.textContent=showLocalScores?'Show global scores':'Show local scores';
+    if(importButton)importButton.hidden=!scores.some(r=>Number.isFinite(elapsedTime(r)));
     list.replaceChildren();
-    if(!rows.length){const empty=document.createElement('li');empty.textContent=publicBoardConfig&&publicRows===null&&!publicStatus?'Loading public scores…':'No scores yet — be the first!';list.appendChild(empty);}
+    if(!rows.length){const empty=document.createElement('li');empty.textContent=!showLocalScores&&publicRows!==null?'No public scores yet. Finish a mission or publish your saved scores below.':!showLocalScores&&!publicStatus?'Loading public scores…':'No local scores yet.';list.appendChild(empty);}
     rows.forEach(row=>{
       const li=document.createElement('li'),who=document.createElement('span'),points=document.createElement('b');
       who.textContent=row.name+' · '+(row.win?'WON':'DNF · L'+row.level);
@@ -181,6 +186,26 @@
     scores=scores.slice(0,10);
     try{localStorage.setItem(scoreKey,JSON.stringify(scores))}catch(_){}
   }
+  async function publishSavedScores(nickname){
+    if(!publicBoardConfig)return;
+    const match=nickname.trim().toLowerCase();
+    if(!match){alert('Enter the nickname you used in your previous games first.');return;}
+    const records=localRows();
+    const eligible=records.filter(r=>r.name.trim().toLowerCase()===match&&Number.isFinite(elapsedTime(r))&&elapsedTime(r)>=0&&elapsedTime(r)<=86400000&&Number.isInteger(r.score)&&r.score>=0&&r.score<=10000000&&Number.isInteger(r.level)&&r.level>=1&&r.level<=5&&(!r.win||r.level===5));
+    if(!eligible.length){alert('No saved timed scores for this nickname on this browser. Untimed records cannot be ranked globally.');return;}
+    if(!confirm('Publish '+eligible.length+' saved score(s) for this nickname to the public leaderboard? Only publish your own records.'))return;
+    const pending=pendingRows(),ids=new Set(pending.map(r=>r.id));
+    for(const row of eligible){
+      if(!row.id)row.id=crypto.randomUUID();
+      if(!ids.has(row.id)){pending.push({...row,elapsedMs:elapsedTime(row)});ids.add(row.id);}
+    }
+    try{localStorage.setItem(scoreKey,JSON.stringify(records));}catch(_){}
+    scores=records;
+    writePending(pending);
+    showLocalScores=false;
+    await refreshPublicBoard();
+    renderBoardRows();
+  }
   function setupNamedBoard(button){
     scores.sort(rankRuns);
     const wrap=document.createElement('section');
@@ -196,8 +221,13 @@
     const list=document.createElement('ol');
     const status=document.createElement('p');status.style.cssText='font-size:11px;color:#9debf2;margin:6px 0';
     wrap.appendChild(status);wrap.appendChild(list);button.before(wrap);
-    boardUi={list,heading,status};renderBoardRows();refreshPublicBoard();
-    if(publicBoardConfig){const note=document.createElement('p');note.className='small';note.textContent='Your nickname, score, result and playing time will appear publicly. Use a nickname, not your real name. Older local scores stay on this device.';entry.appendChild(note);}
+    const actions=document.createElement('div');actions.style.cssText='display:flex;flex-wrap:wrap;gap:6px;margin:8px 0';
+    const toggle=document.createElement('button');toggle.type='button';toggle.style.cssText='font-size:11px;padding:7px 10px;margin:0';toggle.onclick=()=>{showLocalScores=!showLocalScores;renderBoardRows();if(!showLocalScores)refreshPublicBoard();};
+    const importButton=document.createElement('button');importButton.type='button';importButton.textContent='Publish my saved scores';importButton.style.cssText=toggle.style.cssText;importButton.onclick=()=>publishSavedScores(name.value);
+    const refresh=document.createElement('button');refresh.type='button';refresh.textContent='Refresh global';refresh.style.cssText=toggle.style.cssText;refresh.onclick=()=>{showLocalScores=false;refreshPublicBoard();renderBoardRows();};
+    actions.append(toggle,importButton,refresh);wrap.appendChild(actions);
+    boardUi={list,heading,status,toggle,importButton};renderBoardRows();refreshPublicBoard();
+    if(publicBoardConfig){const note=document.createElement('p');note.className='small';note.textContent='Your nickname, score, result and playing time will appear publicly. Use a nickname, not your real name. To share older timed scores, enter the same nickname and click Publish my saved scores.';entry.appendChild(note);}
     const error=document.createElement('div');error.className='nameError';error.setAttribute('role','alert');entry.appendChild(error);
     if(button.id==='againBtn'){const result=document.createElement('p');result.className='namedResult';result.textContent='Score recorded for '+playerName+': '+Math.floor(player.score||0).toLocaleString()+' points'+(runElapsedMs!==null?(player.won?' · Time to win: ':' · Time played: ')+formatWinTime(runElapsedMs):'');entry.before(result);}
     const original=button.onclick;
