@@ -120,12 +120,63 @@
   let scores=[];
   const scoreKey='missionImpossible.namedLeaderboard.v1';
   try { const old=JSON.parse(localStorage.getItem(scoreKey)||'[]'); if(Array.isArray(old)) scores=old.filter(r=>r&&typeof r.name==='string'&&Number.isFinite(r.score)).sort(rankRuns).slice(0,10); }catch(_){}
+  // Configure ONLY the Supabase project URL and public publishable key, never a secret/service key.
+  const publicBoardConfig=null;
+  let publicRows=null,publicStatus='',boardUi=null,syncBusy=false;
+  const pendingKey='missionImpossible.publicPending.v1';
+  function localRows(){
+    try{const old=JSON.parse(localStorage.getItem(scoreKey)||'[]');return Array.isArray(old)?old.filter(r=>r&&typeof r.name==='string'&&Number.isFinite(r.score)).sort(rankRuns).slice(0,10):[];}catch(_){return [];}
+  }
+  function pendingRows(){try{const rows=JSON.parse(localStorage.getItem(pendingKey)||'[]');return Array.isArray(rows)?rows:[];}catch(_){return [];}}
+  function writePending(rows){try{localStorage.setItem(pendingKey,JSON.stringify(rows));}catch(_){}}
+  async function boardRequest(fn,body){
+    const response=await fetch(publicBoardConfig.url.replace(/\/$/,'')+'/rest/v1/rpc/'+fn,{method:'POST',headers:{apikey:publicBoardConfig.key,'Content-Type':'application/json'},body:JSON.stringify(body||{}),cache:'no-store'});
+    if(!response.ok)throw Error('Leaderboard request failed ('+response.status+')');
+    return response.json();
+  }
+  async function refreshPublicBoard(){
+    if(!publicBoardConfig||syncBusy)return;
+    syncBusy=true;
+    try{
+      for(const row of pendingRows()){
+        await boardRequest('submit_mission_run',{run_id:row.id,player_name:row.name,points:row.score,reached_level:row.level,completed:row.win,duration_ms:Math.round(row.elapsedMs)});
+        writePending(pendingRows().filter(p=>p.id!==row.id));
+      }
+      const data=await boardRequest('mission_leaderboard',{});
+      if(!Array.isArray(data))throw Error('Invalid leaderboard response');
+      publicRows=data.map(r=>({name:r.name,score:r.score,level:r.level,win:r.win,elapsedMs:r.elapsed_ms,timeToWinMs:r.win?r.elapsed_ms:null})).sort(rankRuns).slice(0,10);
+      publicStatus='Online · shared worldwide';
+    }catch(_){publicStatus='Offline · new scores saved locally; public sync pending';}
+    finally{syncBusy=false;renderBoardRows();}
+  }
+  function renderBoardRows(){
+    if(!boardUi||!boardUi.list.isConnected)return;
+    const {list,heading,status}=boardUi;
+    heading.textContent=publicBoardConfig?'PUBLIC LEADERBOARD — TOP 10':'LOCAL LEADERBOARD — TOP 10';
+    status.textContent=publicBoardConfig?(publicStatus||'Connecting to public leaderboard…'):'This browser only · public database not connected';
+    const rows=publicBoardConfig&&publicRows!==null?publicRows:scores;
+    list.replaceChildren();
+    if(!rows.length){const empty=document.createElement('li');empty.textContent=publicBoardConfig&&publicRows===null?'Loading public scores…':'No scores yet — be the first!';list.appendChild(empty);}
+    rows.forEach(row=>{
+      const li=document.createElement('li'),who=document.createElement('span'),points=document.createElement('b');
+      who.textContent=row.name+' · '+(row.win?'WON':'DNF · L'+row.level);
+      points.textContent=row.score.toLocaleString();
+      const time=document.createElement('span');time.className='winTime';const ms=row.win?winningTime(row):elapsedTime(row);time.textContent=Number.isFinite(ms)?formatWinTime(ms)+'.'+String(Math.floor(ms%1000/10)).padStart(2,'0'):'Not recorded';time.title=row.win?'Time to win':'Time played before defeat';
+      li.append(who,time,points);list.appendChild(li);
+    });
+  }
+  addEventListener('storage',e=>{if(e.key===scoreKey||e.key===null){scores=localRows();renderBoardRows();}if(e.key===pendingKey&&publicBoardConfig)refreshPublicBoard();});
+  addEventListener('online',()=>refreshPublicBoard());
+  addEventListener('focus',()=>refreshPublicBoard());
+  setInterval(()=>{if(boardUi&&boardUi.list.isConnected&&overlay.style.display!=='none')refreshPublicBoard();},15000);
   bestScore=scores.reduce((best,row)=>Math.max(best,row.score),0);
   function saveNamedScore(win){
     if(runSaved||!playerName)return;
     runSaved=true;
     runElapsedMs=runStartedAt===null?0:Math.max(0,performance.now()-runStartedAt);
-    scores.push({name:playerName,score:Math.max(0,Math.floor(player.score||0)),level:world.level,win:!!win,elapsedMs:runElapsedMs,timeToWinMs:win?runElapsedMs:null});
+    const row={id:crypto.randomUUID(),name:playerName,score:Math.max(0,Math.floor(player.score||0)),level:world.level,win:!!win,elapsedMs:runElapsedMs,timeToWinMs:win?runElapsedMs:null};
+    scores=localRows();scores.push(row);
+    if(publicBoardConfig){writePending([...pendingRows(),row]);refreshPublicBoard();}
     scores.sort(rankRuns);
     scores=scores.slice(0,10);
     try{localStorage.setItem(scoreKey,JSON.stringify(scores))}catch(_){}
@@ -143,16 +194,10 @@
     const rule=document.createElement('p');rule.style.cssText='font-size:11px;color:#a9ddea;margin:4px 0 8px';rule.textContent='Winning times rank first, shortest to longest. Score breaks exact time ties. Failed runs come after wins and rank by level reached, then shortest attempt time.';wrap.appendChild(rule);
     const columns=document.createElement('div');columns.className='scoreColumns';columns.innerHTML='<span>Player / Result</span><span>Time</span><span>Score</span>';wrap.appendChild(columns);
     const list=document.createElement('ol');
-    if(!scores.length){const empty=document.createElement('li');empty.textContent='No scores yet — be the first!';list.appendChild(empty);}
-    scores.forEach(row=>{
-      const li=document.createElement('li'),who=document.createElement('span'),points=document.createElement('b');
-      who.textContent=row.name+' · '+(row.win?'WON':'DNF · L'+row.level);
-      points.textContent=row.score.toLocaleString();
-      const time=document.createElement('span');time.className='winTime';const ms=row.win?winningTime(row):elapsedTime(row);time.textContent=Number.isFinite(ms)?formatWinTime(ms)+'.'+String(Math.floor(ms%1000/10)).padStart(2,'0'):'Not recorded';time.title=row.win?'Time to win':'Time played before defeat';
-      li.append(who,time,points);list.appendChild(li);
-    });
-    wrap.appendChild(list);
-    button.before(wrap);
+    const status=document.createElement('p');status.style.cssText='font-size:11px;color:#9debf2;margin:6px 0';
+    wrap.appendChild(status);wrap.appendChild(list);button.before(wrap);
+    boardUi={list,heading,status};renderBoardRows();refreshPublicBoard();
+    if(publicBoardConfig){const note=document.createElement('p');note.className='small';note.textContent='Your display name, score, result and playing time will appear publicly. Use a nickname, not your real name.';entry.appendChild(note);}
     const error=document.createElement('div');error.className='nameError';error.setAttribute('role','alert');entry.appendChild(error);
     if(button.id==='againBtn'){const result=document.createElement('p');result.className='namedResult';result.textContent='Score recorded for '+playerName+': '+Math.floor(player.score||0).toLocaleString()+' points'+(runElapsedMs!==null?(player.won?' · Time to win: ':' · Time played: ')+formatWinTime(runElapsedMs):'');entry.before(result);}
     const original=button.onclick;
